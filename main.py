@@ -1,0 +1,774 @@
+#!/usr/bin/env python3
+"""
+SynOmix AI - Production Server (Optimized for Large Files)
+Fast processing with vectorized operations
+"""
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
+from typing import List, Dict
+import pandas as pd
+import numpy as np
+import io
+import gzip
+from datetime import datetime
+import os
+
+app = FastAPI(title="SynOmix AI", version="3.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Storage
+experiments = {}
+
+# Databases
+PATHWAYS = {
+    "PI3K-AKT": {"genes": ["PIK3CA", "AKT1", "MTOR", "PTEN", "PIK3R1"], "drugs": ["Alpelisib", "Everolimus"]},
+    "HER2/ERBB": {"genes": ["ERBB2", "ERBB3", "EGFR", "GRB7"], "drugs": ["Trastuzumab", "Pertuzumab", "T-DM1"]},
+    "Cell Cycle": {"genes": ["CCND1", "CDK4", "CDK6", "RB1", "CDKN2A"], "drugs": ["Palbociclib", "Ribociclib"]},
+    "p53 Pathway": {"genes": ["TP53", "MDM2", "MDM4", "ATM", "CHEK2"], "drugs": []},
+    "Estrogen Receptor": {"genes": ["ESR1", "PGR", "FOXA1", "GATA3"], "drugs": ["Tamoxifen", "Fulvestrant"]},
+    "DNA Repair": {"genes": ["BRCA1", "BRCA2", "ATM", "PALB2", "RAD51"], "drugs": ["Olaparib", "Talazoparib"]},
+    "Angiogenesis": {"genes": ["VEGFA", "VEGFB", "HIF1A", "KDR"], "drugs": ["Bevacizumab"]},
+    "MAPK": {"genes": ["KRAS", "NRAS", "BRAF", "MAP2K1"], "drugs": ["Trametinib", "Vemurafenib"]},
+}
+
+BIOMARKERS = {
+    "ERBB2": {"role": "Oncogene (HER2)", "drugs": ["Trastuzumab", "Pertuzumab"]},
+    "ESR1": {"role": "Hormone receptor", "drugs": ["Tamoxifen", "Fulvestrant"]},
+    "TP53": {"role": "Tumor suppressor", "drugs": []},
+    "PIK3CA": {"role": "Oncogene", "drugs": ["Alpelisib"]},
+    "BRCA1": {"role": "DNA repair", "drugs": ["Olaparib", "Talazoparib"]},
+    "BRCA2": {"role": "DNA repair", "drugs": ["Olaparib", "Talazoparib"]},
+    "PTEN": {"role": "Tumor suppressor", "drugs": []},
+    "MKI67": {"role": "Proliferation marker", "drugs": []},
+    "CDK4": {"role": "Cell cycle", "drugs": ["Palbociclib"]},
+    "CDK6": {"role": "Cell cycle", "drugs": ["Palbociclib"]},
+    "CCND1": {"role": "Cell cycle", "drugs": ["Palbociclib"]},
+    "VEGFA": {"role": "Angiogenesis", "drugs": ["Bevacizumab"]},
+    "EGFR": {"role": "Oncogene", "drugs": ["Erlotinib", "Gefitinib"]},
+    "KRAS": {"role": "Oncogene", "drugs": ["Sotorasib"]},
+    "BRAF": {"role": "Oncogene", "drugs": ["Vemurafenib"]},
+    "GRB7": {"role": "HER2 co-amplified", "drugs": []},
+    "FOXA1": {"role": "Transcription factor", "drugs": []},
+    "GATA3": {"role": "Transcription factor", "drugs": []},
+    "PGR": {"role": "Hormone receptor", "drugs": ["Tamoxifen"]},
+    "ATM": {"role": "DNA damage response", "drugs": []},
+    "PALB2": {"role": "DNA repair", "drugs": ["Olaparib"]},
+    "AKT1": {"role": "Oncogene", "drugs": ["Capivasertib"]},
+    "MTOR": {"role": "Cell growth", "drugs": ["Everolimus"]},
+}
+
+BIOMARKER_SET = set(BIOMARKERS.keys())
+
+# Cancer-specific subtypes and markers
+CANCER_SUBTYPES = {
+    "breast": {
+        "name": "Breast Cancer",
+        "subtypes": {
+            "Luminal A": {
+                "markers": {"ESR1": "high", "PGR": "high", "ERBB2": "low", "MKI67": "low"},
+                "description": "Hormone receptor positive, slow-growing, best prognosis",
+                "treatment": "Endocrine therapy (Tamoxifen, Aromatase inhibitors)"
+            },
+            "Luminal B": {
+                "markers": {"ESR1": "high", "PGR": "variable", "ERBB2": "variable", "MKI67": "high"},
+                "description": "Hormone receptor positive but more aggressive, may need chemo",
+                "treatment": "Endocrine therapy + chemotherapy"
+            },
+            "HER2-enriched": {
+                "markers": {"ESR1": "low", "PGR": "low", "ERBB2": "high", "MKI67": "high"},
+                "description": "HER2-driven, aggressive but responds well to targeted therapy",
+                "treatment": "Trastuzumab, Pertuzumab, T-DM1"
+            },
+            "Basal-like": {
+                "markers": {"ESR1": "low", "PGR": "low", "ERBB2": "low", "MKI67": "high"},
+                "description": "Triple-negative, most aggressive, limited targeted options",
+                "treatment": "Chemotherapy, PARP inhibitors if BRCA mutated"
+            }
+        }
+    },
+    "lung": {
+        "name": "Lung Cancer (NSCLC)",
+        "subtypes": {
+            "EGFR-mutant": {
+                "markers": {"EGFR": "mutated", "ALK": "normal", "KRAS": "normal"},
+                "description": "EGFR-driven, common in non-smokers and Asian populations",
+                "treatment": "Osimertinib, Erlotinib, Gefitinib"
+            },
+            "ALK-rearranged": {
+                "markers": {"ALK": "rearranged", "EGFR": "normal", "KRAS": "normal"},
+                "description": "ALK fusion positive, excellent response to ALK inhibitors",
+                "treatment": "Alectinib, Crizotinib, Lorlatinib"
+            },
+            "KRAS-mutant": {
+                "markers": {"KRAS": "mutated", "EGFR": "normal", "STK11": "variable"},
+                "description": "KRAS-driven, historically undruggable but new options emerging",
+                "treatment": "Sotorasib (G12C), Adagrasib"
+            },
+            "PD-L1 high": {
+                "markers": {"CD274": "high", "EGFR": "normal", "ALK": "normal"},
+                "description": "High PD-L1 expression, responds to immunotherapy",
+                "treatment": "Pembrolizumab, Nivolumab, Atezolizumab"
+            },
+            "SCLC": {
+                "markers": {"RB1": "low", "TP53": "mutated", "ASCL1": "high"},
+                "description": "Small cell lung cancer, aggressive neuroendocrine tumor",
+                "treatment": "Platinum-etoposide + immunotherapy"
+            }
+        }
+    },
+    "colorectal": {
+        "name": "Colorectal Cancer",
+        "subtypes": {
+            "CMS1 (MSI-H)": {
+                "markers": {"MLH1": "low", "MSH2": "variable", "BRAF": "mutated"},
+                "description": "Microsatellite unstable, high immune infiltration, good prognosis",
+                "treatment": "Pembrolizumab, Nivolumab (immunotherapy)"
+            },
+            "CMS2 (Canonical)": {
+                "markers": {"APC": "mutated", "TP53": "mutated", "KRAS": "normal"},
+                "description": "WNT/MYC activated, chromosomally unstable, most common",
+                "treatment": "FOLFOX, FOLFIRI, Cetuximab if RAS wild-type"
+            },
+            "CMS3 (Metabolic)": {
+                "markers": {"KRAS": "mutated", "PIK3CA": "variable"},
+                "description": "Metabolic dysregulation, mixed features",
+                "treatment": "FOLFOX, FOLFIRI"
+            },
+            "CMS4 (Mesenchymal)": {
+                "markers": {"TGFB1": "high", "NOTCH1": "variable"},
+                "description": "Stromal infiltration, EMT activated, worst prognosis",
+                "treatment": "FOLFOXIRI, clinical trials"
+            }
+        }
+    },
+    "prostate": {
+        "name": "Prostate Cancer",
+        "subtypes": {
+            "Luminal A": {
+                "markers": {"AR": "high", "FOXA1": "high", "SPINK1": "low"},
+                "description": "Androgen-driven, well-differentiated, good prognosis",
+                "treatment": "Active surveillance or ADT"
+            },
+            "Luminal B": {
+                "markers": {"AR": "high", "FOXA1": "high", "MKI67": "high"},
+                "description": "Androgen-driven but more proliferative",
+                "treatment": "ADT + Abiraterone or Enzalutamide"
+            },
+            "ERG-fusion": {
+                "markers": {"ERG": "high", "TMPRSS2": "rearranged"},
+                "description": "TMPRSS2-ERG fusion, most common genomic alteration",
+                "treatment": "ADT, PARP inhibitors if HRD"
+            },
+            "BRCA-mutant": {
+                "markers": {"BRCA2": "mutated", "BRCA1": "variable", "ATM": "variable"},
+                "description": "DNA repair deficient, sensitive to PARP inhibitors",
+                "treatment": "Olaparib, Rucaparib"
+            },
+            "Neuroendocrine": {
+                "markers": {"AR": "low", "SYP": "high", "CHGA": "high", "RB1": "low"},
+                "description": "AR-independent, aggressive, poor prognosis",
+                "treatment": "Platinum-based chemotherapy"
+            }
+        }
+    },
+    "ovarian": {
+        "name": "Ovarian Cancer",
+        "subtypes": {
+            "High-grade Serous": {
+                "markers": {"TP53": "mutated", "BRCA1": "variable", "BRCA2": "variable"},
+                "description": "Most common type, often BRCA-associated",
+                "treatment": "Platinum + PARP inhibitors"
+            },
+            "Endometrioid": {
+                "markers": {"CTNNB1": "mutated", "PIK3CA": "variable", "ARID1A": "variable"},
+                "description": "Often associated with endometriosis",
+                "treatment": "Platinum-based chemotherapy"
+            },
+            "Clear Cell": {
+                "markers": {"ARID1A": "mutated", "PIK3CA": "mutated", "HNF1B": "high"},
+                "description": "Chemoresistant, associated with endometriosis",
+                "treatment": "Platinum, immunotherapy trials"
+            },
+            "Mucinous": {
+                "markers": {"KRAS": "mutated", "ERBB2": "variable"},
+                "description": "Rare, behaves like GI tumors",
+                "treatment": "GI-type chemotherapy regimens"
+            }
+        }
+    },
+    "melanoma": {
+        "name": "Melanoma",
+        "subtypes": {
+            "BRAF-mutant": {
+                "markers": {"BRAF": "mutated", "NRAS": "normal"},
+                "description": "BRAF V600E/K mutation, ~50% of melanomas",
+                "treatment": "Dabrafenib + Trametinib, Vemurafenib + Cobimetinib"
+            },
+            "NRAS-mutant": {
+                "markers": {"NRAS": "mutated", "BRAF": "normal"},
+                "description": "NRAS-driven, limited targeted options",
+                "treatment": "Immunotherapy (Pembrolizumab, Nivolumab)"
+            },
+            "Triple Wild-type": {
+                "markers": {"BRAF": "normal", "NRAS": "normal", "KIT": "normal"},
+                "description": "No common driver mutations",
+                "treatment": "Immunotherapy"
+            },
+            "KIT-mutant": {
+                "markers": {"KIT": "mutated", "BRAF": "normal"},
+                "description": "Common in acral and mucosal melanoma",
+                "treatment": "Imatinib, Nilotinib"
+            },
+            "Uveal": {
+                "markers": {"GNAQ": "mutated", "GNA11": "mutated", "BAP1": "variable"},
+                "description": "Eye melanoma, distinct biology",
+                "treatment": "Tebentafusp, clinical trials"
+            }
+        }
+    },
+    "glioma": {
+        "name": "Glioma (Brain Cancer)",
+        "subtypes": {
+            "IDH-mutant Astrocytoma": {
+                "markers": {"IDH1": "mutated", "ATRX": "mutated", "TP53": "mutated"},
+                "description": "Better prognosis, younger patients",
+                "treatment": "Temozolomide, Vorasidenib (IDH inhibitor)"
+            },
+            "IDH-mutant Oligodendroglioma": {
+                "markers": {"IDH1": "mutated", "TERT": "mutated"},
+                "description": "1p/19q co-deleted, best prognosis among gliomas",
+                "treatment": "PCV chemotherapy, Temozolomide"
+            },
+            "IDH-wildtype Glioblastoma": {
+                "markers": {"IDH1": "normal", "EGFR": "amplified", "TERT": "mutated", "PTEN": "deleted"},
+                "description": "Most aggressive, poor prognosis",
+                "treatment": "Temozolomide + radiation, Bevacizumab"
+            },
+            "H3K27M-mutant": {
+                "markers": {"H3F3A": "mutated"},
+                "description": "Diffuse midline glioma, pediatric/young adult",
+                "treatment": "ONC201, clinical trials"
+            }
+        }
+    },
+    "pancreatic": {
+        "name": "Pancreatic Cancer",
+        "subtypes": {
+            "Classical": {
+                "markers": {"GATA6": "high", "KRAS": "mutated", "SMAD4": "variable"},
+                "description": "Better differentiated, slightly better prognosis",
+                "treatment": "FOLFIRINOX, Gemcitabine + nab-Paclitaxel"
+            },
+            "Basal-like": {
+                "markers": {"GATA6": "low", "KRT5": "high", "TP63": "high"},
+                "description": "Squamous features, worst prognosis",
+                "treatment": "FOLFIRINOX, clinical trials"
+            },
+            "BRCA-mutant": {
+                "markers": {"BRCA1": "mutated", "BRCA2": "mutated"},
+                "description": "DNA repair deficient, ~5-7% of cases",
+                "treatment": "Platinum-based therapy, Olaparib maintenance"
+            }
+        }
+    },
+    "liver": {
+        "name": "Hepatocellular Carcinoma (HCC)",
+        "subtypes": {
+            "Proliferative": {
+                "markers": {"AFP": "high", "MKI67": "high", "TP53": "mutated"},
+                "description": "Aggressive, AFP-elevated, poor prognosis",
+                "treatment": "Atezolizumab + Bevacizumab, Sorafenib"
+            },
+            "Non-proliferative": {
+                "markers": {"CTNNB1": "mutated", "AFP": "normal"},
+                "description": "WNT-activated, less aggressive",
+                "treatment": "Atezolizumab + Bevacizumab, Lenvatinib"
+            },
+            "Immune-active": {
+                "markers": {"CD274": "high", "IFNG": "high"},
+                "description": "High immune infiltration, responds to immunotherapy",
+                "treatment": "Pembrolizumab, Nivolumab"
+            }
+        }
+    },
+    "gastric": {
+        "name": "Gastric Cancer",
+        "subtypes": {
+            "EBV-positive": {
+                "markers": {"PIK3CA": "mutated", "CD274": "high"},
+                "description": "Epstein-Barr virus associated, high PD-L1",
+                "treatment": "Immunotherapy + chemotherapy"
+            },
+            "MSI-high": {
+                "markers": {"MLH1": "low"},
+                "description": "Microsatellite unstable, good immunotherapy response",
+                "treatment": "Pembrolizumab"
+            },
+            "HER2-positive": {
+                "markers": {"ERBB2": "amplified"},
+                "description": "HER2 amplified, ~15-20% of cases",
+                "treatment": "Trastuzumab + chemotherapy"
+            },
+            "Diffuse": {
+                "markers": {"CDH1": "mutated", "RHOA": "variable"},
+                "description": "Loss of E-cadherin, poor prognosis",
+                "treatment": "FLOT chemotherapy"
+            }
+        }
+    }
+}
+
+# Add more biomarkers for new cancer types
+BIOMARKERS.update({
+    "ALK": {"role": "Oncogene (fusion)", "drugs": ["Alectinib", "Crizotinib", "Lorlatinib"]},
+    "ROS1": {"role": "Oncogene (fusion)", "drugs": ["Crizotinib", "Entrectinib"]},
+    "RET": {"role": "Oncogene", "drugs": ["Selpercatinib", "Pralsetinib"]},
+    "MET": {"role": "Oncogene", "drugs": ["Capmatinib", "Tepotinib"]},
+    "NTRK1": {"role": "Oncogene (fusion)", "drugs": ["Larotrectinib", "Entrectinib"]},
+    "CD274": {"role": "PD-L1", "drugs": ["Pembrolizumab", "Nivolumab", "Atezolizumab"]},
+    "IDH1": {"role": "Metabolic enzyme", "drugs": ["Ivosidenib", "Vorasidenib"]},
+    "IDH2": {"role": "Metabolic enzyme", "drugs": ["Enasidenib"]},
+    "FGFR2": {"role": "Oncogene", "drugs": ["Pemigatinib", "Erdafitinib"]},
+    "FGFR3": {"role": "Oncogene", "drugs": ["Erdafitinib"]},
+    "AR": {"role": "Androgen receptor", "drugs": ["Enzalutamide", "Abiraterone", "Darolutamide"]},
+    "NRAS": {"role": "Oncogene", "drugs": []},
+    "GNAQ": {"role": "Oncogene (uveal)", "drugs": []},
+    "GNA11": {"role": "Oncogene (uveal)", "drugs": []},
+    "BAP1": {"role": "Tumor suppressor", "drugs": []},
+    "ARID1A": {"role": "Tumor suppressor", "drugs": []},
+    "MLH1": {"role": "DNA mismatch repair", "drugs": ["Pembrolizumab"]},
+    "MSH2": {"role": "DNA mismatch repair", "drugs": ["Pembrolizumab"]},
+    "SMAD4": {"role": "Tumor suppressor", "drugs": []},
+    "CTNNB1": {"role": "WNT pathway", "drugs": []},
+    "APC": {"role": "Tumor suppressor", "drugs": []},
+    "RB1": {"role": "Tumor suppressor", "drugs": []},
+    "CDH1": {"role": "E-cadherin", "drugs": []},
+    "STK11": {"role": "Tumor suppressor", "drugs": []},
+    "TERT": {"role": "Telomerase", "drugs": []},
+    "ATRX": {"role": "Chromatin remodeling", "drugs": []},
+})
+
+BIOMARKER_SET = set(BIOMARKERS.keys())
+
+
+def detect_layer_type(filename: str) -> str:
+    f = filename.lower()
+    if any(x in f for x in ['rnaseq', 'rna', 'expression', 'rsem', 'rpkm', 'fpkm', 'tpm']):
+        return 'expression'
+    if any(x in f for x in ['mutation', 'mutsig', 'maf', 'snv']) or f.endswith('.vcf') or f.endswith('.cbt'):
+        return 'mutation'
+    if any(x in f for x in ['methyl', 'meth450', 'meth27']):
+        return 'methylation'
+    if any(x in f for x in ['cnv', 'scnv', 'gistic', 'copy']):
+        return 'cnv'
+    if any(x in f for x in ['rppa', 'protein']):
+        return 'protein'
+    return 'expression'
+
+
+def parse_file(contents: bytes, filename: str) -> pd.DataFrame:
+    """Parse file - process ALL data (requires adequate server memory)"""
+    if filename.endswith('.gz'):
+        contents = gzip.decompress(contents)
+        filename = filename[:-3]
+    
+    text = contents.decode('utf-8') if isinstance(contents, bytes) else contents
+    sep = '\t' if '\t' in text[:2000] else ','
+    
+    # Read full file
+    df = pd.read_csv(io.StringIO(text), sep=sep, index_col=0, low_memory=False)
+    df.columns = df.columns.astype(str).str.strip()
+    df.index = df.index.astype(str).str.strip()
+    
+    # Convert to numeric (float32 to save memory)
+    df = df.apply(pd.to_numeric, errors='coerce').astype('float32')
+    
+    return df
+
+
+def analyze_expression_fast(df: pd.DataFrame) -> Dict:
+    """FAST expression analysis"""
+    means = df.mean(axis=1)
+    variances = df.var(axis=1)
+    
+    results_df = pd.DataFrame({
+        'gene': df.index,
+        'mean': means.round(3),
+        'variance': variances.round(3),
+    })
+    
+    results_df['is_biomarker'] = results_df['gene'].isin(BIOMARKER_SET)
+    results_df = results_df.dropna().sort_values('variance', ascending=False)
+    
+    return {
+        "type": "expression",
+        "total_genes": len(results_df),
+        "top_variable": results_df.head(50).to_dict('records'),
+        "biomarkers_found": results_df[results_df['is_biomarker']].to_dict('records')
+    }
+
+
+def analyze_mutations_fast(df: pd.DataFrame) -> Dict:
+    """FAST mutation analysis"""
+    mut_counts = (df != 0).sum(axis=1)
+    total_samples = df.notna().sum(axis=1)
+    frequencies = (mut_counts / total_samples).fillna(0)
+    
+    results_df = pd.DataFrame({
+        'gene': df.index,
+        'mutation_count': mut_counts.astype(int),
+        'total_samples': total_samples.astype(int),
+        'frequency': frequencies.round(4),
+        'percent': (frequencies * 100).round(1)
+    })
+    
+    results_df['is_biomarker'] = results_df['gene'].isin(BIOMARKER_SET)
+    results_df = results_df.sort_values('frequency', ascending=False)
+    
+    return {
+        "type": "mutation",
+        "total_genes": len(results_df),
+        "top_mutated": results_df.head(50).to_dict('records'),
+        "frequently_mutated": results_df[results_df['frequency'] > 0.02].head(30).to_dict('records')
+    }
+
+
+def analyze_methylation_fast(df: pd.DataFrame) -> Dict:
+    """FAST methylation analysis"""
+    means = df.mean(axis=1)
+    
+    results_df = pd.DataFrame({
+        'gene': df.index,
+        'mean_beta': means.round(4),
+    })
+    
+    results_df['status'] = 'intermediate'
+    results_df.loc[results_df['mean_beta'] > 0.7, 'status'] = 'hypermethylated'
+    results_df.loc[results_df['mean_beta'] < 0.3, 'status'] = 'hypomethylated'
+    results_df['is_biomarker'] = results_df['gene'].isin(BIOMARKER_SET)
+    
+    return {
+        "type": "methylation",
+        "total_genes": len(results_df),
+        "hypermethylated": results_df[results_df['status'] == 'hypermethylated'].head(30).to_dict('records'),
+        "hypomethylated": results_df[results_df['status'] == 'hypomethylated'].head(30).to_dict('records'),
+        "biomarkers_found": results_df[results_df['is_biomarker']].to_dict('records')
+    }
+
+
+def analyze_cnv_fast(df: pd.DataFrame) -> Dict:
+    """FAST CNV analysis"""
+    means = df.mean(axis=1)
+    
+    results_df = pd.DataFrame({
+        'gene': df.index,
+        'mean_log2': means.round(4),
+    })
+    
+    results_df['status'] = 'neutral'
+    results_df.loc[results_df['mean_log2'] > 0.3, 'status'] = 'amplified'
+    results_df.loc[results_df['mean_log2'] < -0.3, 'status'] = 'deleted'
+    results_df['is_biomarker'] = results_df['gene'].isin(BIOMARKER_SET)
+    results_df = results_df.sort_values('mean_log2', ascending=False)
+    
+    return {
+        "type": "cnv",
+        "total_genes": len(results_df),
+        "amplified": results_df[results_df['status'] == 'amplified'].head(30).to_dict('records'),
+        "deleted": results_df[results_df['status'] == 'deleted'].head(30).to_dict('records'),
+        "biomarkers_found": results_df[results_df['is_biomarker']].to_dict('records')
+    }
+
+
+def integrate_multi_omics(layer_results: Dict) -> List[Dict]:
+    """Integrate findings across layers"""
+    gene_evidence = {}
+    
+    if 'expression' in layer_results:
+        for g in layer_results['expression'].get('top_variable', [])[:100]:
+            gene = g['gene']
+            if gene not in gene_evidence:
+                gene_evidence[gene] = {'layers': [], 'findings': [], 'score': 0}
+            gene_evidence[gene]['layers'].append('expression')
+            gene_evidence[gene]['findings'].append(f"High variance")
+            gene_evidence[gene]['score'] += 1
+    
+    if 'mutation' in layer_results:
+        for g in layer_results['mutation'].get('frequently_mutated', []):
+            gene = g['gene']
+            if gene not in gene_evidence:
+                gene_evidence[gene] = {'layers': [], 'findings': [], 'score': 0}
+            gene_evidence[gene]['layers'].append('mutation')
+            gene_evidence[gene]['findings'].append(f"Mutated {g['percent']}%")
+            gene_evidence[gene]['score'] += 2
+    
+    if 'methylation' in layer_results:
+        for g in layer_results['methylation'].get('hypermethylated', []) + layer_results['methylation'].get('hypomethylated', []):
+            gene = g['gene']
+            if gene not in gene_evidence:
+                gene_evidence[gene] = {'layers': [], 'findings': [], 'score': 0}
+            gene_evidence[gene]['layers'].append('methylation')
+            gene_evidence[gene]['findings'].append(g['status'])
+            gene_evidence[gene]['score'] += 1
+    
+    if 'cnv' in layer_results:
+        for g in layer_results['cnv'].get('amplified', []) + layer_results['cnv'].get('deleted', []):
+            gene = g['gene']
+            if gene not in gene_evidence:
+                gene_evidence[gene] = {'layers': [], 'findings': [], 'score': 0}
+            gene_evidence[gene]['layers'].append('cnv')
+            gene_evidence[gene]['findings'].append(g['status'])
+            gene_evidence[gene]['score'] += 1
+    
+    integrated = []
+    for gene, evidence in gene_evidence.items():
+        if len(evidence['layers']) >= 2 or gene in BIOMARKER_SET:
+            integrated.append({
+                'gene': gene,
+                'layers': list(set(evidence['layers'])),
+                'findings': evidence['findings'],
+                'evidence_score': evidence['score'] + (2 if gene in BIOMARKER_SET else 0),
+                'is_biomarker': gene in BIOMARKER_SET,
+                'role': BIOMARKERS.get(gene, {}).get('role', ''),
+                'drugs': BIOMARKERS.get(gene, {}).get('drugs', []),
+                'actionable': len(BIOMARKERS.get(gene, {}).get('drugs', [])) > 0
+            })
+    
+    return sorted(integrated, key=lambda x: -x['evidence_score'])[:20]
+
+
+def pathway_enrichment(layer_results: Dict) -> List[Dict]:
+    """Find enriched pathways"""
+    altered_genes = set()
+    
+    if 'expression' in layer_results:
+        altered_genes.update([g['gene'] for g in layer_results['expression'].get('top_variable', [])[:50]])
+    if 'mutation' in layer_results:
+        altered_genes.update([g['gene'] for g in layer_results['mutation'].get('frequently_mutated', [])])
+    if 'cnv' in layer_results:
+        altered_genes.update([g['gene'] for g in layer_results['cnv'].get('amplified', [])])
+        altered_genes.update([g['gene'] for g in layer_results['cnv'].get('deleted', [])])
+    
+    enriched = []
+    for name, info in PATHWAYS.items():
+        genes = set(info['genes'])
+        overlap = altered_genes & genes
+        if overlap:
+            enriched.append({
+                'pathway': name,
+                'genes_affected': len(overlap),
+                'genes_total': len(genes),
+                'overlap_genes': list(overlap),
+                'score': round(len(overlap) / len(genes), 3),
+                'drugs': info.get('drugs', []),
+                'status': 'ACTIVATED' if len(overlap) / len(genes) > 0.3 else 'ALTERED'
+            })
+    
+    return sorted(enriched, key=lambda x: -x['score'])
+
+
+def predict_subtype(layer_results: Dict, cancer_type: str = 'breast') -> Dict:
+    """Predict cancer subtype based on cancer type"""
+    
+    # Get expression and mutation data
+    expr_genes = {}
+    mut_genes = set()
+    
+    if 'expression' in layer_results:
+        for g in layer_results['expression'].get('biomarkers_found', []):
+            expr_genes[g['gene']] = g['mean']
+        for g in layer_results['expression'].get('top_variable', [])[:100]:
+            if g['gene'] not in expr_genes:
+                expr_genes[g['gene']] = g['mean']
+    
+    if 'mutation' in layer_results:
+        for g in layer_results['mutation'].get('frequently_mutated', []):
+            if g['frequency'] > 0.05:
+                mut_genes.add(g['gene'])
+        for g in layer_results['mutation'].get('top_mutated', [])[:50]:
+            mut_genes.add(g['gene'])
+    
+    # Get cancer-specific subtypes
+    cancer_info = CANCER_SUBTYPES.get(cancer_type, CANCER_SUBTYPES['breast'])
+    subtypes = cancer_info['subtypes']
+    
+    best_match = "Unknown"
+    best_score = 0
+    best_description = ""
+    best_treatment = ""
+    evidence = []
+    all_scores = {}
+    
+    for subtype_name, info in subtypes.items():
+        score = 0
+        subtype_evidence = []
+        
+        for marker, expected in info['markers'].items():
+            # Check expression
+            if marker in expr_genes:
+                val = expr_genes[marker]
+                if expected == "high" and val > 5:
+                    score += 2
+                    subtype_evidence.append(f"{marker}: high ✓")
+                elif expected == "low" and val <= 5:
+                    score += 2
+                    subtype_evidence.append(f"{marker}: low ✓")
+                elif expected == "variable":
+                    score += 1
+                    subtype_evidence.append(f"{marker}: detected")
+            
+            # Check mutations
+            if expected in ["mutated", "rearranged"] and marker in mut_genes:
+                score += 3
+                subtype_evidence.append(f"{marker}: mutated ✓")
+            elif expected == "normal" and marker not in mut_genes:
+                score += 1
+            
+            # Check if marker is deleted/amplified
+            if 'cnv' in layer_results:
+                for g in layer_results['cnv'].get('amplified', []):
+                    if g['gene'] == marker and expected in ["high", "amplified"]:
+                        score += 2
+                        subtype_evidence.append(f"{marker}: amplified ✓")
+                for g in layer_results['cnv'].get('deleted', []):
+                    if g['gene'] == marker and expected in ["low", "deleted"]:
+                        score += 2
+                        subtype_evidence.append(f"{marker}: deleted ✓")
+        
+        all_scores[subtype_name] = score
+        
+        if score > best_score:
+            best_score = score
+            best_match = subtype_name
+            best_description = info.get('description', '')
+            best_treatment = info.get('treatment', '')
+            evidence = subtype_evidence
+    
+    # Calculate confidence
+    total_markers = len(subtypes.get(best_match, {}).get('markers', {}))
+    confidence = min(int((best_score / max(total_markers * 2, 1)) * 100), 95) if best_score > 0 else 30
+    
+    return {
+        'predicted': best_match,
+        'confidence': max(confidence, 40),
+        'evidence': evidence[:6],
+        'description': best_description,
+        'treatment': best_treatment,
+        'prognosis': f"{best_match} - {best_description}",
+        'cancer_type': cancer_info['name'],
+        'all_subtypes': {k: {'score': v, 'info': subtypes[k]} for k, v in all_scores.items()}
+    }
+
+
+# API ENDPOINTS
+
+@app.get("/api")
+def api_root():
+    return {"api": "SynOmix AI", "version": "3.1.0-fast"}
+
+
+@app.post("/api/experiment/create")
+async def create_experiment(name: str = Form("My Experiment"), cancer_type: str = Form("breast")):
+    exp_id = f"exp_{len(experiments)+1}_{datetime.now().strftime('%H%M%S')}"
+    experiments[exp_id] = {"id": exp_id, "name": name, "cancer_type": cancer_type, "layers": {}, "layer_info": {}}
+    return {"success": True, "experiment_id": exp_id}
+
+
+@app.post("/api/experiment/{exp_id}/upload")
+async def upload_layer(exp_id: str, file: UploadFile = File(...), layer_type: str = Form(None)):
+    if exp_id not in experiments:
+        raise HTTPException(404, "Experiment not found")
+    
+    contents = await file.read()
+    detected_type = layer_type or detect_layer_type(file.filename)
+    df = parse_file(contents, file.filename)
+    
+    experiments[exp_id]["layers"][detected_type] = df
+    experiments[exp_id]["layer_info"][detected_type] = {"filename": file.filename, "genes": df.shape[0], "samples": df.shape[1]}
+    
+    return {"success": True, "layer_type": detected_type, "filename": file.filename, "genes": df.shape[0], "samples": df.shape[1], "total_layers": len(experiments[exp_id]["layers"])}
+
+
+@app.post("/api/experiment/{exp_id}/analyze")
+async def analyze_experiment(exp_id: str):
+    if exp_id not in experiments:
+        raise HTTPException(404, "Experiment not found")
+    
+    exp = experiments[exp_id]
+    layers = exp["layers"]
+    
+    if not layers:
+        raise HTTPException(400, "No layers")
+    
+    start = datetime.now()
+    layer_results = {}
+    
+    for layer_type, df in layers.items():
+        if layer_type == 'expression':
+            layer_results['expression'] = analyze_expression_fast(df)
+        elif layer_type == 'mutation':
+            layer_results['mutation'] = analyze_mutations_fast(df)
+        elif layer_type == 'methylation':
+            layer_results['methylation'] = analyze_methylation_fast(df)
+        elif layer_type == 'cnv':
+            layer_results['cnv'] = analyze_cnv_fast(df)
+        elif layer_type == 'protein':
+            layer_results['protein'] = analyze_expression_fast(df)
+    
+    integrated = integrate_multi_omics(layer_results)
+    pathways = pathway_enrichment(layer_results)
+    subtype = predict_subtype(layer_results, exp.get('cancer_type', 'breast'))
+    
+    return {
+        "success": True,
+        "experiment_id": exp_id,
+        "experiment_name": exp["name"],
+        "processing_time": round((datetime.now() - start).total_seconds(), 2),
+        "layers_analyzed": list(layer_results.keys()),
+        "summary": {
+            "total_layers": len(layers),
+            "multi_omics_hits": len(integrated),
+            "actionable_targets": len([i for i in integrated if i.get('actionable')]),
+            "pathways_enriched": len(pathways),
+            "predicted_subtype": subtype["predicted"],
+            "confidence": subtype["confidence"]
+        },
+        "layer_results": layer_results,
+        "integrated": integrated,
+        "pathways": pathways,
+        "subtype": subtype
+    }
+
+
+@app.get("/api/experiments")
+def list_experiments():
+    return {"experiments": list(experiments.keys())}
+
+
+# Serve frontend
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return HTMLResponse("<h1>SynOmix AI</h1><p>API running</p>")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
