@@ -4,7 +4,9 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen;
+    background: linear-gradient(to bottom right, #111827, #581c87, #111827);
+    color: white;
+    min-height: 100vh;
   }
 }
 
@@ -18,11 +20,21 @@
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent;
+    background: linear-gradient(to right, #c084fc, #e879f9);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-purple-500/50 hover:scale-105;
+    @apply text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg;
+    background: linear-gradient(to right, #9333ea, #c026d3);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(to right, #7e22ce, #a21caf);
+    box-shadow: 0 10px 15px -3px rgba(168, 85, 247, 0.5);
+    transform: scale(1.05);
   }
 
   .btn-secondary {
