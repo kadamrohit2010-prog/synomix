@@ -34,7 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
+# Mount static files - serve assets directly at root for Vite build
+if os.path.exists("static/assets"):
+    app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
