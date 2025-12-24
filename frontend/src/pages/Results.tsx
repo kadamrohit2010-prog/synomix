@@ -19,11 +19,11 @@ import AIChat from '../components/ui/AIChat';
 const Results = () => {
   const { experimentId, shareToken } = useParams();
   const [experiment, setExperiment] = useState<Experiment | null>(null);
-  const [results, setResults] = useState<AnalysisResults | null>(null);
+  const [_results, _setResults] = useState<AnalysisResults | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'findings' | 'pathways' | 'hypotheses'>('overview');
   const [selectedGene, setSelectedGene] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
+  const [_shareUrl, setShareUrl] = useState('');
 
   useEffect(() => {
     loadExperiment();

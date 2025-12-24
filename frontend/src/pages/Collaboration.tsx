@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Plus, Mail, Shield, Trash2 } from 'lucide-react';
+import { Users, Plus } from 'lucide-react';
 import { createTeam, getTeams, addTeamMember } from '../services/api';
 import type { Team } from '../types';
 
