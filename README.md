@@ -1,100 +1,134 @@
-# SynOmix AI - Deployment Package
+# SynOmix AI v6.0
 
-Multi-omics biological discovery platform with AI-powered insights.
+**Multi-Omics Biomarker Discovery Platform with AI-Powered Insights**
 
-## 🚀 Quick Deploy to Railway (Recommended)
-
-### Step 1: Create Railway Account
-Go to [railway.app](https://railway.app) and sign up with GitHub.
-
-### Step 2: Deploy
-1. Click "New Project" → "Deploy from GitHub repo"
-2. Connect your GitHub and create a new repo
-3. Upload these files to the repo
-4. Railway will auto-detect and deploy
-
-### Step 3: Get Your URL
-Once deployed, you'll get a URL like: `synomix-production.up.railway.app`
+🔬 Live Demo: [https://synomix.ai](https://synomix.ai)
 
 ---
 
-## 🔧 Alternative: Deploy to Render.com
+## Overview
 
-1. Go to [render.com](https://render.com)
-2. New → Web Service
-3. Connect repo or upload files
-4. Settings:
-   - Build: `pip install -r requirements.txt`
-   - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+SynOmix is a web-based platform for integrating and analyzing multi-omics cancer data. Upload your TCGA or custom datasets and get AI-powered biomarker discovery, subtype prediction, and therapy recommendations in seconds.
 
 ---
 
-## 🖥️ Local Development
+## Features
 
+### 🧬 Multi-Omics Integration
+- **Gene Expression** (RNA-seq, microarray)
+- **Mutations** (MAF, MutSig)
+- **Methylation** (450K, 27K arrays)
+- **Copy Number Variation** (GISTIC)
+- **Proteomics** (RPPA)
+
+### 🔬 Tumor Microenvironment Analysis (NEW in v6.0)
+- Cell-type deconvolution from bulk expression data
+- 10 cell populations: Tumor, CD8+ T, CD4+ T, Tregs, B cells, NK, Macrophages, Dendritic, Fibroblasts, Endothelial
+- **Immunotherapy Score** prediction
+- AI-generated clinical insights
+
+### 🎯 Cancer Subtype Prediction
+- Breast cancer: Luminal A, Luminal B, HER2+, Basal-like, Triple Negative
+- Evidence-based classification with confidence scores
+- Treatment recommendations
+
+### 🤖 AI Assistant (Streaming)
+- Real-time streaming responses for faster interaction
+- Context-aware Q&A about your analysis results
+- Powered by Claude AI
+
+### 📊 Analysis & Export
+- Multi-omics convergence analysis
+- Pathway enrichment
+- Hypothesis generation
+- PDF export
+
+---
+
+## Quick Start
+
+### Using the Demo
+1. Visit [synomix.ai](https://synomix.ai)
+2. Click "Or try with demo TCGA breast cancer data"
+3. View results instantly
+
+### Upload Your Data
+1. Create a new experiment
+2. Upload TCGA files (.cct, .cbt, .txt, .csv, .tsv)
+3. Select cancer type
+4. Click "Analyze"
+
+---
+
+## Supported File Formats
+
+| Data Type | Formats | Example |
+|-----------|---------|---------|
+| Expression | .cct, .csv, .tsv, .txt | RSEM, log2 normalized |
+| Mutations | .cbt, .maf, .csv | MutSig2CV output |
+| Methylation | .cct, .csv | Beta values |
+| CNV | .cct, .csv | GISTIC2 output |
+| Proteomics | .cct, .csv | RPPA data |
+
+**Note:** TCGA-style gene IDs (`GENE|ENTREZID`) are automatically parsed.
+
+---
+
+## Tech Stack
+
+- **Frontend:** React, Tailwind CSS, Recharts
+- **Backend:** FastAPI, Python
+- **AI:** Anthropic Claude API (streaming)
+- **Analysis:** NumPy, Pandas
+
+---
+
+## Version History
+
+### v6.0 (Current)
+- ✨ Cell-type deconvolution & Tumor Microenvironment analysis
+- ✨ Immunotherapy score prediction
+- ✨ Streaming AI chat responses
+- 🐛 Fixed TCGA gene ID parsing
+
+### v5.0
+- Multi-omics integration
+- Cancer subtype prediction
+- AI assistant
+
+---
+
+## Local Development
 ```bash
-# Install dependencies
+# Clone
+git clone https://github.com/kadamrohit2010-prog/synomix.git
+cd synomix
+
+# Setup
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Run server
-python main.py
+# Configure
+echo "ANTHROPIC_API_KEY=your_key" > .env
 
-# Or with uvicorn
-uvicorn main:app --reload --port 8000
-```
-
-Open http://localhost:8000
-
----
-
-## 📁 Files
-
-```
-SynOmix_Deploy/
-├── main.py           # FastAPI backend + API
-├── requirements.txt  # Python dependencies
-├── Procfile          # For Heroku/Railway
-├── railway.json      # Railway config
-└── static/
-    └── index.html    # Frontend UI
+# Run
+uvicorn main:app --reload
 ```
 
 ---
 
-## 🔌 API Endpoints
+## License
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/experiment/create` | POST | Create new experiment |
-| `/api/experiment/{id}/upload` | POST | Upload omics layer |
-| `/api/experiment/{id}/analyze` | POST | Run analysis |
-| `/api/experiments` | GET | List experiments |
-| `/api/quick` | POST | Quick single-file analysis |
-
-API docs available at `/docs` when running.
+MIT License - see LICENSE file
 
 ---
 
-## 📊 Supported File Formats
+## Author
 
-- Gene Expression: `.csv`, `.tsv`, `.cct`
-- Mutations: `.vcf`, `.maf`, `.cbt`
-- Methylation: `.csv`, `.cct`
-- Copy Number: `.csv`, `.cct`
-- All formats support `.gz` compression
+**Rohit Kadam**
+- GitHub: [@kadamrohit2010-prog](https://github.com/kadamrohit2010-prog)
 
 ---
 
-## 🧬 Features
-
-- Multi-layer omics integration
-- Automatic file type detection
-- Pathway enrichment analysis
-- Cancer subtype prediction
-- Drug target identification
-- AI query interface
-
----
-
-## 📧 Support
-
-For issues or feedback: [your email]
+*Built for cancer researchers and bioinformaticians to accelerate biomarker discovery.*
