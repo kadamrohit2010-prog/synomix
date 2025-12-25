@@ -3,54 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SynOmix AI - Biomarker Discovery Platform</title>
+    <title>SynOmix AI - Multi-Omics Discovery Platform</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        * { font-family: 'Inter', sans-serif; }
-        body { background: linear-gradient(135deg, #0f0a1a 0%, #1a0a2e 50%, #0a1628 100%); min-height: 100vh; color: #e4e4e7; }
-        
-        .glass { background: rgba(30, 20, 50, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(139, 92, 246, 0.2); }
-        .card { background: linear-gradient(145deg, rgba(30,20,50,0.8), rgba(20,15,40,0.9)); border: 1px solid rgba(139,92,246,0.15); border-radius: 16px; transition: all 0.3s; }
-        .card:hover { border-color: rgba(139,92,246,0.4); transform: translateY(-2px); }
-        
-        .glow-purple { box-shadow: 0 0 60px rgba(139, 92, 246, 0.3); }
-        .glow-green { box-shadow: 0 0 40px rgba(34, 197, 94, 0.3); }
-        .glow-amber { box-shadow: 0 0 40px rgba(245, 158, 11, 0.3); }
-        
-        .gradient-text { background: linear-gradient(135deg, #a78bfa, #8b5cf6, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .gradient-green { background: linear-gradient(135deg, #4ade80, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .gradient-amber { background: linear-gradient(135deg, #f59e0b, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        .btn-primary { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%); transition: all 0.3s; }
-        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(139,92,246,0.4); }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        * { font-family: 'Space Grotesk', sans-serif; box-sizing: border-box; }
+        body { background: #030712; min-height: 100vh; color: #f1f5f9; }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at 20% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+            pointer-events: none; z-index: 0;
+        }
+        .sidebar { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border-right: 1px solid rgba(148, 163, 184, 0.1); transition: all 0.3s; }
+        .sidebar-collapsed { width: 72px; }
+        .sidebar-expanded { width: 260px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer; color: #94a3b8; }
+        .nav-item:hover { background: rgba(6, 182, 212, 0.1); color: #f1f5f9; }
+        .nav-item.active { background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2)); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; transition: all 0.3s; }
+        .card:hover { border-color: rgba(6, 182, 212, 0.3); transform: translateY(-2px); }
+        .btn-primary { background: linear-gradient(135deg, #06b6d4, #8b5cf6); color: white; font-weight: 600; border: none; border-radius: 12px; padding: 12px 24px; cursor: pointer; transition: all 0.3s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(6, 182, 212, 0.4); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: rgba(148, 163, 184, 0.1); color: #f1f5f9; font-weight: 500; border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 12px 24px; cursor: pointer; }
+        .gradient-text { background: linear-gradient(135deg, #06b6d4, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.3); } 50% { box-shadow: 0 0 40px rgba(139,92,246,0.6); } }
-        
-        .fade-in { animation: fadeIn 0.6s ease-out; }
-        .pulse { animation: pulse 2s infinite; }
-        .float { animation: float 3s ease-in-out infinite; }
-        .animate-glow { animation: glow 2s ease-in-out infinite; }
-        
-        .scrollbar::-webkit-scrollbar { width: 6px; }
-        .scrollbar::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 3px; }
-        
-        .insight-card { position: relative; overflow: hidden; }
-        .insight-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); }
-        
-        .stat-ring { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
-        .stat-ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; padding: 4px; background: linear-gradient(135deg, #8b5cf6, #ec4899); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; }
-        
-        .drop-zone { border: 2px dashed rgba(139,92,246,0.3); transition: all 0.3s; }
-        .drop-zone:hover, .drop-zone.dragover { border-color: rgba(139,92,246,0.8); background: rgba(139,92,246,0.1); }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.3); } 50% { box-shadow: 0 0 40px rgba(6, 182, 212, 0.5); } }
+        .fade-in { animation: fadeInUp 0.5s ease-out; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-glow { animation: glow 2s infinite; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.3); border-radius: 3px; }
+        .drop-zone { border: 2px dashed rgba(6, 182, 212, 0.3); border-radius: 16px; transition: all 0.3s; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #06b6d4; background: rgba(6, 182, 212, 0.05); }
+        .stat-card { position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #06b6d4, #8b5cf6); }
+        .tab-pill { padding: 10px 20px; border-radius: 10px; font-weight: 500; transition: all 0.2s; cursor: pointer; color: #94a3b8; background: transparent; border: none; }
+        .tab-pill:hover { background: rgba(148, 163, 184, 0.1); color: #f1f5f9; }
+        .tab-pill.active { background: linear-gradient(135deg, #06b6d4, #8b5cf6); color: white; }
+        .bar-chart { display: flex; align-items: end; gap: 8px; height: 200px; padding: 20px 0; }
+        .bar { background: linear-gradient(to top, #06b6d4, #8b5cf6); border-radius: 4px 4px 0 0; min-width: 40px; transition: all 0.3s; }
+        .bar:hover { opacity: 0.8; }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; z-index: 100; height: 100vh; }
+            .sidebar-collapsed { transform: translateX(-100%); }
+        }
     </style>
 </head>
 <body>
@@ -58,1307 +61,706 @@
 <script type="text/babel">
 const { useState, useRef, useEffect } = React;
 
-// API Base URL - uses relative path when deployed, localhost for development
-const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
-
-// Info/Tooltip Component
-const InfoTip = ({ title, children }) => {
-    const [show, setShow] = useState(false);
-    return (
-        <span className="relative inline-block">
-            <button 
-                onClick={() => setShow(!show)} 
-                className="ml-1 w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 text-xs inline-flex items-center justify-center hover:bg-purple-500/50 transition"
-            >
-                i
-            </button>
-            {show && (
-                <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-4 rounded-xl bg-gray-900 border border-purple-500/30 shadow-xl text-sm">
-                    <div className="font-bold text-purple-300 mb-2">{title}</div>
-                    <div className="text-purple-200/80">{children}</div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-3 h-3 bg-gray-900 border-r border-b border-purple-500/30"></div>
-                </div>
-            )}
-        </span>
-    );
-};
-
-// Methodology definitions
-const METHODOLOGY = {
-    altered: {
-        title: "What does 'Altered' mean?",
-        text: "A gene is marked as 'altered' when it shows significant changes in one or more data layers (expression, mutation, methylation, or copy number) compared to normal tissue or reference values."
-    },
-    highVariance: {
-        title: "High Variance",
-        text: "Genes with high variance show large differences in expression across samples. This often indicates genes that distinguish tumor subtypes or are dysregulated in cancer. Calculated as statistical variance across all samples."
-    },
-    mutationFreq: {
-        title: "Mutation Frequency",
-        text: "Percentage of samples carrying a mutation in this gene. Higher frequency suggests the mutation may be a driver event. Calculated as: (samples with mutation / total samples) × 100%"
-    },
-    hypermethylated: {
-        title: "Hypermethylated",
-        text: "DNA methylation β-value > 0.7, indicating the gene's promoter is heavily methylated. This typically silences gene expression - important for tumor suppressors that get 'turned off' in cancer."
-    },
-    hypomethylated: {
-        title: "Hypomethylated",
-        text: "DNA methylation β-value < 0.3, indicating low methylation. This can lead to gene activation - concerning when oncogenes become 'turned on' in cancer."
-    },
-    amplified: {
-        title: "Amplified (Copy Number)",
-        text: "Log2 copy number ratio > 0.3, meaning more copies of this gene exist than normal. Gene amplification often leads to overexpression and is common for oncogenes like ERBB2 (HER2)."
-    },
-    deleted: {
-        title: "Deleted (Copy Number)",
-        text: "Log2 copy number ratio < -0.3, meaning fewer copies than normal. Deletions often affect tumor suppressor genes, removing their protective function."
-    },
-    pathwayActivated: {
-        title: "Pathway ACTIVATED",
-        text: "Multiple genes in this pathway show alterations that would increase pathway activity (oncogene amplification, overexpression, activating mutations). This pathway may be driving tumor growth."
-    },
-    pathwayImpaired: {
-        title: "Pathway IMPAIRED",
-        text: "Key genes in this pathway are lost or silenced (tumor suppressor deletion, hypermethylation, loss-of-function mutations). The protective function of this pathway is compromised."
-    },
-    confidence: {
-        title: "Confidence Score",
-        text: "Based on: number of supporting data layers, consistency of evidence, presence in known cancer gene databases, and mutation frequency. HIGH = strong multi-layer evidence; MEDIUM = single layer or lower frequency."
-    },
-    subtype: {
-        title: "Molecular Subtype Prediction",
-        text: "Predicted using expression levels of key marker genes (ESR1, PGR, ERBB2, MKI67) following PAM50-like classification. Confidence based on how well markers match expected patterns."
-    }
-};
-
-// References
-const REFERENCES = {
-    databases: [
-        { name: "OncoKB", url: "https://www.oncokb.org/", desc: "Precision Oncology Knowledge Base" },
-        { name: "CIViC", url: "https://civicdb.org/", desc: "Clinical Interpretation of Variants in Cancer" },
-        { name: "COSMIC", url: "https://cancer.sanger.ac.uk/cosmic", desc: "Catalogue of Somatic Mutations in Cancer" },
-        { name: "cBioPortal", url: "https://www.cbioportal.org/", desc: "Cancer Genomics Data Portal" },
-    ],
-    disclaimer: "FOR RESEARCH USE ONLY. Not for clinical decision-making. Treatment suggestions are based on published literature and require validation by qualified healthcare providers."
-};
-
 const LAYER_TYPES = {
-    expression: { icon: '🧬', name: 'Gene Expression', color: 'violet', desc: 'RNA-seq, transcriptomics' },
-    mutation: { icon: '🔬', name: 'Mutations', color: 'red', desc: 'SNVs, driver mutations' },
-    methylation: { icon: '🔵', name: 'Methylation', color: 'blue', desc: 'Epigenetic silencing' },
-    cnv: { icon: '📊', name: 'Copy Number', color: 'orange', desc: 'Amplifications, deletions' },
-    protein: { icon: '🔷', name: 'Proteomics', color: 'cyan', desc: 'Protein abundance' },
+    expression: { icon: '🧬', name: 'Gene Expression', color: '#06b6d4' },
+    mutation: { icon: '🔬', name: 'Mutations', color: '#f43f5e' },
+    methylation: { icon: '🔵', name: 'Methylation', color: '#3b82f6' },
+    cnv: { icon: '📊', name: 'Copy Number', color: '#f59e0b' },
+    protein: { icon: '🔷', name: 'Proteomics', color: '#8b5cf6' },
 };
 
-// PDF Export Function
-const generatePDF = (results, layers, cancerType, CANCER_TYPES) => {
-    const jspdf = window.jspdf;
-    const pdf = new jspdf.jsPDF();
-    var y = 20;
-    
-    // Header
-    pdf.setFillColor(245, 158, 11);
-    pdf.rect(0, 0, 220, 35, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(22);
-    pdf.text('SynOmix AI - Discovery Report', 20, 22);
-    pdf.setFontSize(10);
-    pdf.text(new Date().toLocaleDateString(), 170, 22);
-    
-    // Summary
-    y = 50;
-    pdf.setTextColor(100, 100, 100);
-    pdf.setFontSize(12);
-    pdf.text('Analysis Type: Biomarker Discovery', 20, y);
-    pdf.text('Layers Analyzed: ' + layers.length, 20, y + 8);
-    var novelCount = results.findings ? results.findings.filter(function(f) { return f.isNovel; }).length : 0;
-    var knownCount = results.findings ? results.findings.filter(function(f) { return !f.isNovel; }).length : 0;
-    pdf.text('Novel Candidates: ' + novelCount, 20, y + 16);
-    pdf.text('Known Alterations: ' + knownCount, 20, y + 24);
-    
-    // Novel Discoveries
-    y = 100;
-    pdf.setTextColor(245, 158, 11);
-    pdf.setFontSize(14);
-    pdf.text('NOVEL BIOMARKER CANDIDATES', 20, y);
-    y += 10;
-    
-    pdf.setTextColor(60, 60, 60);
-    pdf.setFontSize(10);
-    if (results.findings) {
-        results.findings.filter(function(f) { return f.isNovel; }).slice(0, 5).forEach(function(f, i) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text((i + 1) + '. ' + f.gene + ' - ' + (f.title || 'Novel'), 20, y);
-            pdf.setFont('helvetica', 'normal');
-            if (f.fdr) pdf.text('   FDR: ' + f.fdr.toFixed(4), 20, y + 5);
-            if (f.findings) pdf.text('   Evidence: ' + (Array.isArray(f.findings) ? f.findings.join(', ') : f.findings), 20, y + 10);
-            y += 18;
-        });
-    }
-    
-    // Hypotheses
-    y += 10;
-    pdf.setTextColor(245, 158, 11);
-    pdf.setFontSize(14);
-    pdf.text('RESEARCH HYPOTHESES', 20, y);
-    y += 10;
-    
-    pdf.setTextColor(60, 60, 60);
-    pdf.setFontSize(10);
-    if (results.hypotheses) {
-        results.hypotheses.slice(0, 3).forEach(function(h, i) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text((i + 1) + '. ' + h.title, 20, y);
-            pdf.setFont('helvetica', 'normal');
-            var hypLines = pdf.splitTextToSize(h.hypothesis, 170);
-            pdf.text(hypLines, 20, y + 5);
-            y += 15 + (hypLines.length * 4);
-        });
-    }
-    
-    // Footer
-    pdf.setFontSize(8);
-    pdf.setTextColor(150, 150, 150);
-    pdf.text('FOR RESEARCH USE ONLY - Requires independent validation', 20, 280);
-    
-    pdf.save('SynOmix_Discovery_' + new Date().toISOString().split('T')[0] + '.pdf');
+
+const CANCER_TYPES = {
+    breast: { name: "Breast Cancer", icon: "🎀" },
+    lung: { name: "Lung Cancer", icon: "🫁" },
+    colorectal: { name: "Colorectal", icon: "🔴" },
+    prostate: { name: "Prostate", icon: "🔵" },
+    ovarian: { name: "Ovarian", icon: "🟣" },
+    melanoma: { name: "Melanoma", icon: "🟤" },
+    glioma: { name: "Glioma", icon: "🧠" },
+    pancreatic: { name: "Pancreatic", icon: "🟡" },
+    liver: { name: "Liver", icon: "🟠" },
+    gastric: { name: "Gastric", icon: "⭕" },
 };
 
-// Auto-detect layer type from filename
-const detectLayerType = (filename) => {
-    const f = filename.toLowerCase();
-    if (f.includes('rnaseq') || f.includes('rna') || f.includes('expression') || f.includes('rsem') || f.includes('fpkm') || f.includes('rpkm')) return 'expression';
-    if (f.includes('mutation') || f.includes('mutsig') || f.includes('maf') || f.includes('.vcf') || f.endsWith('.cbt')) return 'mutation';
-    if (f.includes('methyl') || f.includes('meth450') || f.includes('meth27')) return 'methylation';
-    if (f.includes('cnv') || f.includes('scnv') || f.includes('scna') || f.includes('gistic') || f.includes('copy')) return 'cnv';
-    if (f.includes('rppa') || f.includes('protein') || f.includes('proteome')) return 'protein';
-    return 'expression'; // default
-};
 
-// Demo data
 const DEMO = {
-    experiment: { name: 'TCGA Breast Cancer Cohort', cancer: 'Breast Invasive Carcinoma', samples: 1097 },
     layers: [
         { type: 'expression', file: 'TCGA_BRCA_RNAseq.cct', genes: 20155, samples: 1093 },
         { type: 'mutation', file: 'TCGA_BRCA_mutations.cbt', genes: 7966, samples: 975 },
         { type: 'methylation', file: 'TCGA_BRCA_methylation.cct', genes: 20106, samples: 783 },
     ],
     results: {
-        story: {
-            title: "Novel Biomarker Candidates Identified",
-            subtitle: "Multi-omics convergence reveals potential new therapeutic targets",
-            summary: "Analysis identified 8 novel gene candidates not previously associated with breast cancer, showing significant multi-omics convergence. These candidates warrant further validation as potential biomarkers.",
-            keyInsight: "8 novel candidates + 4 known alterations with multi-omics support",
-        },
-        metrics: { totalGenes: 20155, significantGenes: 847, novelDiscoveries: 8, knownAlterations: 4, multiOmicsHits: 12, pathwaysAffected: 6, processingTime: 0.12 },
-        discoveries: {
-            novel: [
-                { gene: 'SFRP1', title: '⭐ Novel Candidate', layers: ['expression', 'methylation'], evidence: 9, fdr: 0.002, findings: ['3.2x downregulated (p<0.001)', 'Promoter hypermethylated'], hypothesis: 'SFRP1 silencing may contribute to Wnt pathway activation', confidence: 'HIGH', isNovel: true },
-                { gene: 'ADAMTS5', title: '⭐ Novel Candidate', layers: ['expression', 'cnv'], evidence: 8, fdr: 0.008, findings: ['2.8x overexpressed', 'Copy number gain'], hypothesis: 'ADAMTS5 overexpression may promote tumor invasion', confidence: 'HIGH', isNovel: true },
-                { gene: 'PTPN13', title: '⭐ Novel Candidate', layers: ['mutation', 'expression'], evidence: 7, fdr: 0.015, findings: ['Mutated in 8% samples', '0.4x decreased'], hypothesis: 'PTPN13 loss may enhance growth factor signaling', confidence: 'MEDIUM', isNovel: true },
-                { gene: 'ZNF217', title: '⭐ Novel Candidate', layers: ['expression', 'cnv'], evidence: 7, fdr: 0.021, findings: ['4.1x overexpressed', 'Amplified 20q13'], hypothesis: 'ZNF217 amplification may drive transcriptional programs', confidence: 'MEDIUM', isNovel: true },
-            ],
-            known: [
-                { gene: 'PIK3CA', title: '📚 Known Driver', layers: ['expression', 'mutation'], evidence: 8, fdr: 0.001, findings: ['H1047R hotspot (34%)', '3.8x overexpressed'], hypothesis: 'Validates known PI3K pathway activation', confidence: 'HIGH', isNovel: false, drugs: ['Alpelisib'] },
-                { gene: 'TP53', title: '📚 Known Suppressor', layers: ['mutation', 'expression'], evidence: 7, fdr: 0.001, findings: ['R248W damaging (33%)', '0.4x decreased'], hypothesis: 'Confirms p53 pathway inactivation', confidence: 'HIGH', isNovel: false },
-                { gene: 'ERBB2', title: '📚 Known Oncogene', layers: ['expression', 'cnv'], evidence: 9, fdr: 0.001, findings: ['8.2x overexpressed', 'Amplified'], hypothesis: 'Classic HER2 amplification detected', confidence: 'HIGH', isNovel: false, drugs: ['Trastuzumab'] },
-            ]
-        },
+        story: { title: "Novel Biomarker Candidates Identified", subtitle: "Multi-omics convergence reveals new targets", summary: "Analysis identified 8 novel gene candidates with significant multi-omics convergence.", keyInsight: "8 novel + 4 known alterations" },
+        metrics: { totalGenes: 20155, novelDiscoveries: 8, knownAlterations: 4, multiOmicsHits: 12, pathwaysAffected: 6 },
         findings: [
-            { gene: 'SFRP1', title: '⭐ Novel - Epigenetically Silenced', layers: ['expression', 'methylation'], layerDetails: { expression: '3.2x downregulated', methylation: 'Promoter hypermethylated' }, biology: 'SFRP1 is a Wnt antagonist. Its silencing may activate oncogenic Wnt signaling - a novel finding in this cohort.', drugs: [], confidence: 'HIGH', evidence: 9, isNovel: true, fdr: 0.002 },
-            { gene: 'ADAMTS5', title: '⭐ Novel - Amplified & Overexpressed', layers: ['expression', 'cnv'], layerDetails: { expression: '2.8x overexpressed', cnv: 'Copy number gain' }, biology: 'ADAMTS5 encodes a metalloproteinase. Its overexpression may promote ECM remodeling and invasion.', drugs: [], confidence: 'HIGH', evidence: 8, isNovel: true, fdr: 0.008 },
-            { gene: 'PIK3CA', title: '📚 Known - Double-Hit Oncogene', layers: ['expression', 'mutation'], layerDetails: { expression: '3.8x overexpressed', mutation: 'H1047R hotspot (34%)' }, biology: 'PIK3CA mutation with overexpression hyperactivates PI3K-AKT pathway. Well-established therapeutic target.', drugs: ['Alpelisib (Piqray)'], confidence: 'HIGH', evidence: 8, isNovel: false, fdr: 0.001 },
-            { gene: 'PTPN13', title: '⭐ Novel - Tumor Suppressor Candidate', layers: ['mutation', 'expression'], layerDetails: { mutation: 'Mutated 8%', expression: '0.4x decreased' }, biology: 'PTPN13 is a protein tyrosine phosphatase. Loss may enhance receptor tyrosine kinase signaling.', drugs: [], confidence: 'MEDIUM', evidence: 7, isNovel: true, fdr: 0.015 },
-            { gene: 'TP53', title: '📚 Known - Lost Tumor Suppressor', layers: ['expression', 'mutation'], layerDetails: { expression: '0.4x decreased', mutation: 'R248W damaging (33%)' }, biology: 'TP53 mutation with reduced expression indicates complete loss of this critical tumor suppressor.', drugs: [], confidence: 'HIGH', evidence: 7, isNovel: false, fdr: 0.001 },
-            { gene: 'ZNF217', title: '⭐ Novel - Transcription Factor', layers: ['expression', 'cnv'], layerDetails: { expression: '4.1x overexpressed', cnv: 'Amplified 20q13' }, biology: 'ZNF217 is a transcriptional repressor. Amplification may drive oncogenic gene expression programs.', drugs: [], confidence: 'MEDIUM', evidence: 7, isNovel: true, fdr: 0.021 },
+            { gene: 'SFRP1', title: '⭐ Novel - Epigenetically Silenced', layers: ['expression', 'methylation'], layerDetails: { expression: '3.2x downregulated', methylation: 'Promoter hypermethylated' }, biology: 'SFRP1 silencing may activate Wnt signaling.', drugs: [], confidence: 'HIGH', evidence: 9, isNovel: true },
+            { gene: 'ADAMTS5', title: '⭐ Novel - Amplified', layers: ['expression', 'cnv'], layerDetails: { expression: '2.8x overexpressed', cnv: 'Copy number gain' }, biology: 'May promote ECM remodeling and invasion.', drugs: [], confidence: 'HIGH', evidence: 8, isNovel: true },
+            { gene: 'PIK3CA', title: '📚 Known - Double-Hit', layers: ['expression', 'mutation'], layerDetails: { expression: '3.8x overexpressed', mutation: 'H1047R hotspot (34%)' }, biology: 'Hyperactivates PI3K-AKT pathway.', drugs: ['Alpelisib'], confidence: 'HIGH', evidence: 8, isNovel: false },
+            { gene: 'TP53', title: '📚 Known - Lost TSG', layers: ['expression', 'mutation'], layerDetails: { expression: '0.4x decreased', mutation: 'R248W (33%)' }, biology: 'Loss of tumor suppressor.', drugs: [], confidence: 'HIGH', evidence: 7, isNovel: false },
+            { gene: 'ERBB2', title: '📚 Known - Amplified', layers: ['expression', 'cnv'], layerDetails: { expression: '8.2x overexpressed', cnv: 'Amplified' }, biology: 'Classic HER2 amplification.', drugs: ['Trastuzumab'], confidence: 'HIGH', evidence: 9, isNovel: false },
         ],
         hypotheses: [
-            { rank: 1, gene: 'SFRP1', title: 'SFRP1 as a Novel Prognostic Biomarker', hypothesis: 'SFRP1 epigenetic silencing may represent a previously uncharacterized mechanism of Wnt pathway activation in breast cancer.', evidence: 'Multi-omics convergence: promoter hypermethylation (β=0.78) correlating with 3.2-fold expression decrease (FDR=0.002)', nextSteps: ['Validate SFRP1 methylation in independent cohort', 'Correlate with patient survival outcomes', 'Test Wnt pathway activation status', 'Evaluate as therapeutic target'], confidence: 'HIGH', publicationPotential: 'HIGH' },
-            { rank: 2, gene: 'ADAMTS5', title: 'ADAMTS5 Overexpression in Tumor Invasion', hypothesis: 'ADAMTS5 copy number gain and overexpression may promote extracellular matrix remodeling and metastatic potential.', evidence: 'CNV gain correlating with 2.8x expression increase (FDR=0.008) across 67% of samples', nextSteps: ['Validate in metastatic vs primary tumors', 'Functional studies in invasion assays', 'Assess as prognostic marker'], confidence: 'HIGH', publicationPotential: 'HIGH' },
-            { rank: 3, gene: 'PTPN13', title: 'PTPN13 as Tumor Suppressor Candidate', hypothesis: 'PTPN13 inactivation through mutation and downregulation may enhance growth factor receptor signaling.', evidence: 'Mutation frequency 8% with concurrent 60% expression reduction (FDR=0.015)', nextSteps: ['Characterize mutation functional impact', 'Test effect on RTK signaling', 'Correlate with treatment response'], confidence: 'MEDIUM', publicationPotential: 'MEDIUM' },
+            { rank: 1, gene: 'SFRP1', title: 'SFRP1 as Novel Biomarker', hypothesis: 'SFRP1 silencing may activate Wnt pathway.', evidence: 'Multi-omics convergence', nextSteps: ['Validate in cohort', 'Survival analysis'], confidence: 'HIGH', publicationPotential: 'HIGH' },
         ],
         pathways: [
-            { name: 'Wnt Signaling', status: 'ACTIVATED', genes: ['SFRP1', 'CTNNB1', 'APC', 'AXIN2'], affected: 2, drugs: [], impact: '⭐ Novel finding - SFRP1 silencing may activate pathway' },
-            { name: 'PI3K-AKT-mTOR', status: 'ACTIVATED', genes: ['PIK3CA', 'AKT1', 'MTOR', 'PTEN'], affected: 3, drugs: ['Alpelisib', 'Everolimus'], impact: 'Known driver - validates cohort quality' },
-            { name: 'ECM Remodeling', status: 'ACTIVATED', genes: ['ADAMTS5', 'MMP2', 'MMP9'], affected: 2, drugs: [], impact: '⭐ Novel finding - invasion signature' },
-            { name: 'p53 Pathway', status: 'IMPAIRED', genes: ['TP53', 'MDM2'], affected: 2, drugs: [], impact: 'Known - lost checkpoint control' },
-            { name: 'RTK Signaling', status: 'ACTIVATED', genes: ['ERBB2', 'EGFR', 'PTPN13'], affected: 2, drugs: ['Trastuzumab'], impact: 'PTPN13 loss may enhance signaling' },
+            { name: 'Wnt Signaling', status: 'ACTIVATED', genes: ['SFRP1', 'CTNNB1', 'APC'], affected: 2, drugs: [], impact: '⭐ Novel finding' },
+            { name: 'PI3K-AKT-mTOR', status: 'ACTIVATED', genes: ['PIK3CA', 'AKT1', 'MTOR'], affected: 3, drugs: ['Alpelisib', 'Everolimus'], impact: 'Known driver' },
+            { name: 'p53 Pathway', status: 'IMPAIRED', genes: ['TP53', 'MDM2'], affected: 2, drugs: [], impact: 'Lost checkpoint' },
         ],
-        subtype: {
-            predicted: 'Discovery Mode', confidence: 0,
-            description: 'Analysis focused on novel biomarker discovery rather than subtype classification. Upload clinical annotations for subtype prediction.'
-        }
+        subtype: { predicted: 'HER2-enriched', confidence: 94, description: 'HER2-driven, responds to targeted therapy' }
     }
 };
 
-// Enhanced AI responses with dynamic data
-const getAIResponse = (query, results) => {
-    const q = query.toLowerCase();
-    
-    // Subtype comparison
-    if (q.includes('subtype') || q.includes('why') && (q.includes('luminal') || q.includes('her2') || q.includes('basal'))) {
-        const subtypes = {
-            "Luminal A": { markers: {ESR1: "high", PGR: "high", ERBB2: "low", MKI67: "low"}, desc: "Hormone-driven, slow-growing, best prognosis" },
-            "Luminal B": { markers: {ESR1: "high", PGR: "variable", ERBB2: "variable", MKI67: "high"}, desc: "Hormone-driven but more aggressive, may need chemo" },
-            "HER2-enriched": { markers: {ESR1: "low", PGR: "low", ERBB2: "high", MKI67: "high"}, desc: "HER2-driven, responds to targeted therapy" },
-            "Basal-like": { markers: {ESR1: "low", PGR: "low", ERBB2: "low", MKI67: "high"}, desc: "Triple-negative, most aggressive, needs chemo" }
-        };
-        
-        const predicted = results?.subtype?.predicted || "HER2-enriched";
-        const confidence = results?.subtype?.confidence || 94;
-        
-        let response = `## 🧬 Subtype Classification Explained\n\n`;
-        response += `### Predicted: **${predicted}** (${confidence}% confidence)\n\n`;
-        response += `### Why This Subtype?\n`;
-        response += `The classification is based on 4 key marker genes:\n\n`;
-        response += `| Marker | Expected for ${predicted} | Your Data |\n`;
-        response += `|--------|-------------------------|----------|\n`;
-        
-        const expected = subtypes[predicted]?.markers || {};
-        Object.entries(expected).forEach(([gene, exp]) => {
-            response += `| ${gene} | ${exp} | ${exp} ✓ |\n`;
-        });
-        
-        response += `\n### Why Not Other Subtypes?\n\n`;
-        
-        Object.entries(subtypes).forEach(([name, info]) => {
-            if (name !== predicted) {
-                const mismatch = Object.entries(info.markers).filter(([g, v]) => v !== expected[g]);
-                response += `**${name}**: Would require ${mismatch.map(([g,v]) => `${g}=${v}`).join(', ')}\n`;
-                response += `↳ ${info.desc}\n\n`;
-            }
-        });
-        
-        return response;
-    }
-    
-    // Summary
-    if (q.includes('summary') || q.includes('overview') || q.includes('what did you find')) {
-        const findings = results?.findings || [];
-        const pathways = results?.pathways || [];
-        const subtype = results?.subtype?.predicted || "Unknown";
-        
-        let response = `## 🧬 Analysis Summary\n\n`;
-        response += `**Predicted Subtype:** ${subtype} (${results?.subtype?.confidence || 0}% confidence)\n\n`;
-        response += `### Top Findings:\n`;
-        
-        findings.slice(0, 4).forEach((f, i) => {
-            response += `${i+1}. **${f.gene}** - ${f.title} [${f.confidence}]\n`;
-            response += `   └ ${f.biology}\n`;
-        });
-        
-        response += `\n### Pathway Status:\n`;
-        pathways.slice(0, 3).forEach(p => {
-            const icon = p.status === 'ACTIVATED' ? '🔴' : '🔵';
-            response += `${icon} **${p.name}**: ${p.status}\n`;
-        });
-        
-        const actionable = findings.filter(f => f.drugs?.length > 0);
-        response += `\n### Actionable Targets: ${actionable.length}\n`;
-        actionable.forEach(f => {
-            response += `• ${f.gene} → ${f.drugs.join(', ')}\n`;
-        });
-        
-        return response;
-    }
-    
-    // Gene-specific queries
-    const geneMatch = q.match(/\b(pik3ca|erbb2|her2|tp53|brca1|brca2|esr1|pgr|mki67|egfr|kras|braf|pten|akt1|mtor|cdh1)\b/i);
-    if (geneMatch) {
-        const gene = geneMatch[1].toUpperCase().replace('HER2', 'ERBB2');
-        const finding = results?.findings?.find(f => f.gene.toUpperCase() === gene);
-        const biomarker = BIOMARKERS[gene];
-        
-        let response = `## 🔬 ${gene} Analysis\n\n`;
-        
-        if (finding) {
-            response += `### Status: Found in Your Data ✓\n\n`;
-            response += `**${finding.title}** [${finding.confidence} confidence]\n\n`;
-            response += `### Evidence:\n`;
-            Object.entries(finding.layerDetails || {}).forEach(([layer, detail]) => {
-                response += `• ${LAYER_TYPES[layer]?.icon || '📊'} ${LAYER_TYPES[layer]?.name || layer}: ${detail}\n`;
-            });
-            response += `\n### Biology:\n${finding.biology}\n`;
-            
-            if (finding.drugs?.length > 0) {
-                response += `\n### Targeted Drugs:\n`;
-                finding.drugs.forEach(d => {
-                    response += `💊 **${d}**\n`;
-                });
-            }
-        } else if (biomarker) {
-            response += `### Status: Known Biomarker (not altered in your data)\n\n`;
-            response += `**Role:** ${biomarker.role}\n`;
-            if (biomarker.drugs?.length > 0) {
-                response += `**Drugs (if altered):** ${biomarker.drugs.join(', ')}\n`;
-            }
-            response += `\n*This gene was analyzed but did not show significant alterations.*`;
-        } else {
-            response += `Gene ${gene} is not in our biomarker database. It may still be in your data - check the Findings tab.`;
-        }
-        
-        return response;
-    }
-    
-    // Pathway queries
-    if (q.includes('pathway') || q.includes('pi3k') || q.includes('mapk') || q.includes('cell cycle')) {
-        const pathways = results?.pathways || [];
-        let response = `## 🔀 Pathway Analysis\n\n`;
-        
-        pathways.forEach(p => {
-            const icon = p.status === 'ACTIVATED' ? '🔴' : p.status === 'IMPAIRED' ? '🔵' : '⚪';
-            response += `### ${icon} ${p.name}\n`;
-            response += `**Status:** ${p.status}\n`;
-            response += `**Genes Affected:** ${p.genes?.join(', ') || 'Multiple'}\n`;
-            if (p.drugs?.length > 0) {
-                response += `**Targetable with:** ${p.drugs.join(', ')}\n`;
-            }
-            response += `\n`;
-        });
-        
-        return response;
-    }
-    
-    // Treatment queries  
-    if (q.includes('treatment') || q.includes('drug') || q.includes('therapy') || q.includes('option')) {
-        const findings = results?.findings?.filter(f => f.drugs?.length > 0) || [];
-        let response = `## 💊 Treatment Options\n\n`;
-        response += `⚠️ *For research discussion only - requires clinical validation*\n\n`;
-        
-        if (findings.length > 0) {
-            response += `### Based on Your Biomarkers:\n\n`;
-            findings.forEach(f => {
-                response += `**${f.gene}** alterations suggest:\n`;
-                f.drugs.forEach(d => {
-                    response += `• 💊 ${d}\n`;
-                });
-                response += `\n`;
-            });
-        }
-        
-        response += `### Recommended Confirmatory Tests:\n`;
-        response += `• Validate key findings with orthogonal methods\n`;
-        response += `• Consider germline testing if BRCA altered\n`;
-        response += `• Confirm HER2 status by IHC/FISH if indicated\n`;
-        
-        return response;
-    }
-    
-    // Confidence / methodology
-    if (q.includes('confidence') || q.includes('how') || q.includes('method') || q.includes('calculate')) {
-        return `## 📊 Methodology & Confidence Scoring\n\n### How We Score Findings:\n\n**Evidence Layers:**\n• Expression changes: +1 point\n• Mutations detected: +2 points\n• Methylation changes: +1 point\n• Copy number changes: +1 point\n• Known biomarker: +2 bonus points\n\n**Confidence Levels:**\n• **HIGH**: Score ≥ 4, or known driver + multi-layer evidence\n• **MEDIUM**: Score 2-3, single layer evidence\n\n### Subtype Prediction:\nBased on PAM50-like classification using ESR1, PGR, ERBB2, MKI67 expression patterns matched against canonical subtype profiles.\n\n### Pathway Enrichment:\nFisher's exact test principle - proportion of pathway genes altered vs. background rate.`;
-    }
-    
-    // Compare genes
-    if (q.includes('compare') || q.includes('vs') || q.includes('versus') || q.includes('difference')) {
-        const findings = results?.findings || [];
-        if (findings.length >= 2) {
-            let response = `## ⚖️ Comparison of Top Findings\n\n`;
-            response += `| Gene | Layers | Confidence | Actionable |\n`;
-            response += `|------|--------|------------|------------|\n`;
-            findings.slice(0, 5).forEach(f => {
-                response += `| ${f.gene} | ${f.layers?.length || 0} | ${f.confidence} | ${f.drugs?.length > 0 ? '✓ Yes' : '✗ No'} |\n`;
-            });
-            return response;
-        }
-    }
-    
-    // Default with smart suggestions
-    const findings = results?.findings?.map(f => f.gene) || ['PIK3CA', 'ERBB2', 'TP53'];
-    return `## 🤖 How Can I Help?\n\nI can explain your analysis results. Try asking:\n\n**Subtype:**\n• "Why was this classified as ${results?.subtype?.predicted || 'HER2-enriched'}?"\n• "What are the other possible subtypes?"\n\n**Genes:**\n• "Tell me about ${findings[0] || 'PIK3CA'}"\n• "Compare the top findings"\n\n**Treatment:**\n• "What are my treatment options?"\n• "Which targets are actionable?"\n\n**Methods:**\n• "How is confidence calculated?"\n• "Explain the pathway analysis"`;
+
+const generatePDF = (results, layers) => {
+    const pdf = new window.jspdf.jsPDF();
+    pdf.setFillColor(6, 182, 212);
+    pdf.rect(0, 0, 220, 35, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.text('SynOmix AI Report', 20, 22);
+    pdf.setFontSize(10);
+    pdf.text(new Date().toLocaleDateString(), 170, 22);
+    let y = 50;
+    pdf.setTextColor(100, 100, 100);
+    pdf.setFontSize(12);
+    pdf.text('Layers: ' + layers.length, 20, y);
+    pdf.text('Novel: ' + (results.metrics?.novelDiscoveries || 0), 20, y + 10);
+    y = 80;
+    pdf.setTextColor(6, 182, 212);
+    pdf.setFontSize(14);
+    pdf.text('TOP FINDINGS', 20, y);
+    y += 12;
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFontSize(10);
+    results.findings?.slice(0, 5).forEach((f, i) => { pdf.text((i+1) + '. ' + f.gene + ' - ' + f.title, 20, y); y += 8; });
+    pdf.setFontSize(8);
+    pdf.setTextColor(150);
+    pdf.text('FOR RESEARCH USE ONLY', 20, 280);
+    pdf.save('SynOmix_Report.pdf');
 };
 
-// Cancer types available
-const CANCER_TYPES = {
-    breast: { name: "Breast Cancer", icon: "🎀" },
-    lung: { name: "Lung Cancer (NSCLC)", icon: "🫁" },
-    colorectal: { name: "Colorectal Cancer", icon: "🔴" },
-    prostate: { name: "Prostate Cancer", icon: "🔵" },
-    ovarian: { name: "Ovarian Cancer", icon: "🟣" },
-    melanoma: { name: "Melanoma", icon: "🟤" },
-    glioma: { name: "Glioma (Brain)", icon: "🧠" },
-    pancreatic: { name: "Pancreatic Cancer", icon: "🟡" },
-    liver: { name: "Liver Cancer (HCC)", icon: "🟠" },
-    gastric: { name: "Gastric Cancer", icon: "⭕" },
+
+const detectLayerType = (filename) => {
+    const f = filename.toLowerCase().replace(".gz", "");
+    // CNV - check FIRST (before expression, since SCNA contains "rna")
+    if (f.includes("cnv") || f.includes("scna") || f.includes("gistic") || f.includes("copy") || f.includes("snp_6")) return "cnv";
+    // Methylation - check BEFORE expression
+    if (f.includes("methyl") || f.includes("meth450") || f.includes("meth27")) return "methylation";
+    // Mutations
+    if (f.includes("mutation") || f.includes("mutsig") || f.includes("maf") || f.includes("snv") || f.endsWith(".vcf") || f.endsWith(".cbt")) return "mutation";
+    // Proteomics
+    if (f.includes("rppa") || f.includes("protein") || f.includes("proteom")) return "protein";
+    // Expression - check LAST (most generic)
+    if (f.includes("rnaseq") || f.includes("rna_") || f.includes("_rna") || f.includes("expression") || f.includes("rsem") || f.includes("rpkm") || f.includes("fpkm") || f.includes("tpm") || f.endsWith(".cct")) return "expression";
+    return "expression";
 };
+
+
+const Icons = {
+    Menu: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
+    Home: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+    Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>,
+    Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+    Dna: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v6.072a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>,
+    Brain: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
+    Pathway: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+    X: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+    Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+    Lightbulb: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
+};
+
+const SimpleBarChart = ({ data }) => {
+    const maxVal = Math.max(...data.map(d => d.value), 1);
+    const yTicks = [0, Math.ceil(maxVal/2), maxVal];
+    return (
+        <div className="relative" style={{ height: "240px" }}>
+            {/* Y-axis */}
+            <div className="absolute left-0 top-0 bottom-8 w-8 flex flex-col justify-between text-xs text-slate-400">
+                {yTicks.reverse().map((tick, i) => (
+                    <span key={i} className="text-right pr-2">{tick}</span>
+                ))}
+            </div>
+            {/* Y-axis label */}
+            <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-slate-500 whitespace-nowrap">Evidence Score</div>
+            {/* Chart area */}
+            <div className="ml-10 h-full flex flex-col">
+                {/* Bars */}
+                <div className="flex-1 flex items-end gap-3 border-l border-b border-slate-600 pl-2 pb-2 relative">
+                    {/* Grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                        {[0,1,2].map(i => <div key={i} className="border-t border-slate-700/50 w-full"></div>)}
+                    </div>
+                    {/* Bars */}
+                    {data.map((d, i) => (
+                        <div key={i} className="flex flex-col items-center gap-1 flex-1 z-10">
+                            <div 
+                                className="w-full max-w-12 rounded-t-md transition-all duration-300 hover:opacity-80 cursor-pointer relative group"
+                                style={{ 
+                                    height: `${Math.max((d.value / maxVal) * 150, 4)}px`,
+                                    background: d.isNovel ? "linear-gradient(to top, #f59e0b, #fbbf24)" : "linear-gradient(to top, #06b6d4, #8b5cf6)"
+                                }}
+                            >
+                                {/* Tooltip */}
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity border border-slate-600">
+                                    {d.name}: {d.value}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {/* X-axis labels */}
+                <div className="flex gap-3 pl-2 pt-2">
+                    {data.map((d, i) => (
+                        <div key={i} className="flex-1 text-center">
+                            <span className="text-xs text-slate-400 font-medium">{d.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 function App() {
-    const [view, setView] = useState('setup');
-    const [expName, setExpName] = useState('My Experiment');
-    const [cancerType, setCancerType] = useState('breast');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState('home');
     const [layers, setLayers] = useState([]);
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [tab, setTab] = useState('story');
+    const [cancerType, setCancerType] = useState('breast');
+    const [tab, setTab] = useState('all');
     const [query, setQuery] = useState('');
     const [chat, setChat] = useState([]);
-    const [dragOver, setDragOver] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const fileRef = useRef();
     const chatRef = useRef();
+    const queryRef = useRef();
 
-    // Handle file selection
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const navItems = [
+        { id: 'home', icon: Icons.Home, label: 'Dashboard' },
+        { id: 'upload', icon: Icons.Upload, label: 'Upload Data' },
+        { id: 'results', icon: Icons.Chart, label: 'Results', disabled: !results },
+        { id: 'genes', icon: Icons.Dna, label: 'Genes', disabled: !results },
+        { id: 'pathways', icon: Icons.Pathway, label: 'Pathways', disabled: !results },
+        { id: "hypotheses", icon: Icons.Lightbulb, label: "Hypotheses", disabled: !results },
+        { id: 'ai', icon: Icons.Brain, label: 'AI Assistant', disabled: !results },
+    ];
+
     const handleFiles = (files) => {
         const newLayers = Array.from(files).map(file => ({
-            file: file.name,
-            type: detectLayerType(file.name),
+            file, name: file.name, type: detectLayerType(file.name),
             size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
             genes: Math.floor(Math.random() * 15000) + 5000,
-            samples: Math.floor(Math.random() * 800) + 200,
-            fileObj: file
         }));
-        setLayers(prev => [...prev, ...newLayers]);
+        setLayers([...layers, ...newLayers]);
     };
 
-    // File input change
-    const onFileChange = (e) => {
-        if (e.target.files?.length) {
-            handleFiles(e.target.files);
-        }
-    };
+    const loadDemo = () => { setLayers(DEMO.layers); setResults(DEMO.results); setCurrentPage('results'); };
 
-    // Drag and drop handlers
-    const onDragOver = (e) => { e.preventDefault(); setDragOver(true); };
-    const onDragLeave = (e) => { e.preventDefault(); setDragOver(false); };
-    const onDrop = (e) => {
-        e.preventDefault();
-        setDragOver(false);
-        if (e.dataTransfer.files?.length) {
-            handleFiles(e.dataTransfer.files);
-        }
-    };
-
-    // Update layer type
-    const updateLayerType = (index, newType) => {
-        setLayers(prev => prev.map((l, i) => i === index ? { ...l, type: newType } : l));
-    };
-
-    // Remove layer
-    const removeLayer = (index) => {
-        setLayers(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Load demo
-    const loadDemo = () => {
-        setExpName(DEMO.experiment.name);
-        setLayers(DEMO.layers);
-        setView('upload');
-    };
-
-    // State for experiment ID
-    const [expId, setExpId] = useState(null);
-    const [useDemo, setUseDemo] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState('');
-
-    // Run analysis
     const runAnalysis = async () => {
+        if (layers.length === 0) return;
         setLoading(true);
-        
-        // If demo mode (no fileObj), use demo results
-        if (!layers[0]?.fileObj) {
-            setUseDemo(true);
-            await new Promise(r => setTimeout(r, 2000));
-            setResults(DEMO.results);
-            setView('results');
-            setLoading(false);
-            return;
-        }
-
         try {
-            // 1. Create experiment
-            setUploadProgress('Creating experiment...');
-            const createForm = new FormData();
-            createForm.append('name', expName);
-            createForm.append('cancer_type', cancerType);
+            // Check if using demo data (no actual files)
+            const hasRealFiles = layers.some(l => l.file instanceof File);
             
-            const createRes = await fetch(`${API_BASE}/api/experiment/create`, {
-                method: 'POST',
-                body: createForm
+            if (!hasRealFiles) {
+                // Demo mode - use demo results
+                await new Promise(r => setTimeout(r, 1500));
+                setResults(DEMO.results);
+                setCurrentPage("results");
+                setLoading(false);
+                return;
+            }
+            
+            // Real files - call API
+            const createRes = await fetch("/api/experiment/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "name=Analysis&cancer_type=" + cancerType
             });
             const createData = await createRes.json();
-            const experimentId = createData.experiment_id;
-            setExpId(experimentId);
-
-            // 2. Upload each layer
-            for (let i = 0; i < layers.length; i++) {
-                const layer = layers[i];
-                setUploadProgress(`Uploading ${layer.file} (${i+1}/${layers.length})...`);
-                
-                const uploadForm = new FormData();
-                uploadForm.append('file', layer.fileObj);
-                uploadForm.append('layer_type', layer.type);
-                
-                const uploadRes = await fetch(`${API_BASE}/api/experiment/${experimentId}/upload`, {
-                    method: 'POST',
-                    body: uploadForm
-                });
-                const uploadData = await uploadRes.json();
-                
-                // Update layer with actual counts
-                setLayers(prev => prev.map((l, idx) => 
-                    idx === i ? { ...l, genes: uploadData.genes, samples: uploadData.samples } : l
-                ));
-            }
-
-            // 3. Run analysis
-            setUploadProgress('Running multi-omics analysis...');
-            const analyzeRes = await fetch(`${API_BASE}/api/experiment/${experimentId}/analyze`, {
-                method: 'POST'
-            });
-            const analyzeData = await analyzeRes.json();
-
-            // 4. Transform API results to match frontend format
-            const transformedResults = transformApiResults(analyzeData);
-            setResults(transformedResults);
-            setView('results');
+            const expId = createData.experiment_id;
             
-        } catch (error) {
-            console.error('Analysis error:', error);
-            alert('Error running analysis. Please check the console for details.');
-        }
-        
-        setLoading(false);
-        setUploadProgress('');
-    };
-
-    // Transform API results to frontend format
-    const transformApiResults = (apiData) => {
-        // Classify findings as novel or known
-        const knownGenes = new Set(['TP53', 'PIK3CA', 'PTEN', 'KRAS', 'BRAF', 'EGFR', 'ERBB2', 'MYC', 'CCND1', 'CDK4', 'CDK6', 'RB1', 'BRCA1', 'BRCA2', 'ATM', 'APC', 'VHL', 'NF1', 'ESR1', 'AR', 'FGFR1', 'FGFR2', 'FGFR3', 'MET', 'ALK', 'ROS1', 'MTOR', 'AKT1']);
-        
-        const findings = apiData.integrated.slice(0, 10).map(g => ({
-            gene: g.gene,
-            title: knownGenes.has(g.gene) ? `📚 Known - ${g.role || 'Altered'}` : `⭐ Novel Candidate`,
-            layers: g.layers,
-            layerDetails: g.findings.reduce((acc, f, i) => {
-                acc[g.layers[i] || 'other'] = f;
-                return acc;
-            }, {}),
-            findings: g.findings,
-            biology: g.actionable ? `${g.gene} is a known therapeutic target with available drugs.` : `${g.gene} shows alterations across ${g.layers.length} data layers.`,
-            drugs: g.drugs || [],
-            confidence: g.evidence_score > 3 ? 'HIGH' : 'MEDIUM',
-            evidence: g.evidence_score || g.layers.length * 2,
-            fdr: 0.01 + Math.random() * 0.04,
-            isNovel: !knownGenes.has(g.gene)
-        }));
-        
-        const novelFindings = findings.filter(f => f.isNovel);
-        const knownFindings = findings.filter(f => !f.isNovel);
-        
-        // Generate hypotheses from novel findings
-        const hypotheses = novelFindings.slice(0, 3).map((f, i) => ({
-            rank: i + 1,
-            gene: f.gene,
-            title: `${f.gene} as a Novel Biomarker Candidate`,
-            hypothesis: `${f.gene} may represent a previously uncharacterized biomarker, showing significant alterations across ${f.layers.length} data layers (${f.layers.join(', ')}).`,
-            evidence: `Multi-omics convergence: ${f.findings.join(', ')}`,
-            nextSteps: [
-                `Validate ${f.gene} in independent cohort`,
-                `Correlate with clinical outcomes`,
-                `Investigate functional role`,
-                `Assess therapeutic potential`
-            ],
-            confidence: f.confidence,
-            publicationPotential: f.layers.length >= 2 ? 'HIGH' : 'MEDIUM'
-        }));
-        
-        return {
-            story: {
-                title: `Novel Biomarker Candidates Identified`,
-                subtitle: "Multi-omics convergence analysis",
-                summary: `Analysis of ${apiData.layers_analyzed.length} data layers identified ${novelFindings.length} novel gene candidates and ${knownFindings.length} known alterations with multi-layer evidence.`,
-                keyInsight: `${novelFindings.length} novel candidates + ${knownFindings.length} known alterations`,
-            },
-            metrics: {
-                totalGenes: Object.values(apiData.layer_results)[0]?.total_genes || 0,
-                novelDiscoveries: novelFindings.length,
-                knownAlterations: knownFindings.length,
-                multiOmicsHits: apiData.summary.multi_omics_hits,
-                pathwaysAffected: apiData.summary.pathways_enriched,
-                processingTime: apiData.processing_time
-            },
-            findings: findings,
-            hypotheses: hypotheses,
-            pathways: apiData.pathways.slice(0, 6).map(p => ({
-                name: p.pathway,
-                status: p.status,
-                genes: p.overlap_genes,
-                affected: p.genes_affected,
-                drugs: p.drugs,
-                impact: `${p.genes_affected}/${p.genes_total} pathway genes affected`
-            })),
-            treatment: {
-                primary: {
-                    title: 'Recommended Approach',
-                    regimen: apiData.pathways[0]?.drugs?.length > 0 ? 'Targeted Therapy' : 'Standard of Care',
-                    drugs: apiData.integrated.filter(g => g.drugs?.length > 0).flatMap(g => g.drugs).slice(0, 3),
-                    rationale: 'Based on multi-omics evidence'
-                },
-                secondary: apiData.integrated.filter(g => g.drugs?.length > 0).slice(1, 3).map(g => ({
-                    drug: g.drugs[0],
-                    indication: `${g.gene} alteration`
-                })),
-                testing: ['Confirm findings with orthogonal methods', 'Consider germline testing if applicable']
-            },
-            subtype: {
-                predicted: apiData.subtype?.predicted || 'Unknown',
-                confidence: apiData.subtype?.confidence || 0,
-                markers: apiData.subtype?.evidence?.map(e => ({ gene: e.split(':')[0], observed: e })) || [],
-                description: apiData.subtype?.description || apiData.subtype?.prognosis || 'Molecular subtype based on expression patterns',
-                treatment: apiData.subtype?.treatment || '',
-                cancerType: apiData.subtype?.cancer_type || CANCER_TYPES[cancerType]?.name || 'Cancer',
-                allSubtypes: apiData.subtype?.all_subtypes || {}
+            // Upload each layer
+            for (const layer of layers) {
+                if (layer.file instanceof File) {
+                    const formData = new FormData();
+                    formData.append("file", layer.file);
+                    formData.append("layer_type", layer.type);
+                    await fetch("/api/experiment/" + expId + "/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+                }
             }
-        };
+            
+            // Run analysis
+            const analyzeRes = await fetch("/api/experiment/" + expId + "/analyze", { method: "POST" });
+            const data = await analyzeRes.json();
+            
+            // Transform API response to frontend format
+            const transformedResults = {
+                story: {
+                    title: "Analysis Complete: " + (data.summary?.predicted_subtype || "Multi-Omics Results"),
+                    subtitle: "Analyzed " + data.layers_analyzed?.length + " data layers",
+                    summary: "Found " + (data.summary?.multi_omics_hits || 0) + " multi-omics hits and " + (data.summary?.actionable_targets || 0) + " actionable targets.",
+                    keyInsight: (data.summary?.multi_omics_hits || 0) + " hits, " + (data.summary?.pathways_enriched || 0) + " pathways"
+                },
+                metrics: {
+                    totalGenes: data.layer_results?.expression?.total_genes || 0,
+                    novelDiscoveries: data.integrated?.filter(g => !g.is_biomarker).length || 0,
+                    knownAlterations: data.integrated?.filter(g => g.is_biomarker).length || 0,
+                    multiOmicsHits: data.summary?.multi_omics_hits || 0,
+                    pathwaysAffected: data.summary?.pathways_enriched || 0
+                },
+                findings: (data.integrated || []).map(g => ({
+                    gene: g.gene,
+                    title: g.is_biomarker ? "📚 Known - " + (g.role || "Biomarker") : "⭐ Novel Candidate",
+                    layers: g.layers || [],
+                    layerDetails: g.findings?.reduce((acc, f, i) => { acc[g.layers?.[i] || "data"] = f; return acc; }, {}) || {},
+                    biology: g.role ? g.role + ". " + g.findings?.join(", ") : g.findings?.join(", ") || "Multi-omics evidence",
+                    drugs: g.drugs || [],
+                    confidence: g.evidence_score >= 4 ? "HIGH" : "MEDIUM",
+                    evidence: g.evidence_score || 0,
+                    isNovel: !g.is_biomarker
+                })),
+                pathways: (data.pathways || []).map(p => ({
+                    name: p.pathway,
+                    status: p.status || "ALTERED",
+                    genes: p.overlap_genes || [],
+                    affected: p.genes_affected || 0,
+                    drugs: p.drugs || [],
+                    impact: p.genes_affected + "/" + p.genes_total + " genes affected"
+                })),
+                subtype: {
+                    predicted: data.subtype?.predicted || "Unknown",
+                    confidence: data.subtype?.confidence || 50,
+                    description: data.subtype?.description || "Analysis complete"
+                },
+                deconvolution: data.layer_results?.deconvolution || null,
+                hypotheses: (data.integrated || []).slice(0, 3).map((g, i) => ({
+                    rank: i + 1,
+                    gene: g.gene,
+                    title: g.gene + " as potential biomarker",
+                    hypothesis: g.role ? g.role + " - warrants further investigation" : "Shows multi-omics convergence",
+                    evidence: g.findings?.join(", ") || "Multiple data layers",
+                    nextSteps: ["Validate in independent cohort", "Functional studies"],
+                    confidence: g.evidence_score >= 4 ? "HIGH" : "MEDIUM",
+                    publicationPotential: g.evidence_score >= 4 ? "HIGH" : "MEDIUM"
+                }))
+            };
+            
+            setResults(transformedResults);
+            setCurrentPage("results");
+        } catch (e) {
+            console.error("Analysis failed:", e);
+            alert("Analysis failed: " + e.message);
+        }
+        setLoading(false);
     };
 
-    // AI query
-    const handleQuery = () => {
-        if (!query.trim()) return;
-        setChat(prev => [...prev, { type: 'user', text: query }]);
-        const q = query;
-        setQuery('');
-        setTimeout(() => {
-            setChat(prev => [...prev, { type: 'ai', text: getAIResponse(q, results) }]);
-            setTimeout(() => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight), 100);
-        }, 600);
+    const handleQuery = async () => {
+        const q = queryRef.current?.value || "";
+        if (!q.trim()) return;
+        setChat(prev => [...prev, { type: "user", text: q }]);
+        queryRef.current.value = "";
+        setChat(prev => [...prev, { type: "ai", text: "" }]);
+        try {
+            const res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: q, results: results })
+            });
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = "";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split("\n");
+                for (const line of lines) {
+                    if (line.startsWith("data: ") && !line.includes("[DONE]")) {
+                        const text = line.slice(6);
+                        fullText += text;
+                        setChat(prev => [...prev.slice(0, -1), { type: "ai", text: fullText }]);
+                    }
+                }
+            }
+            if (!fullText) setChat(prev => [...prev.slice(0, -1), { type: "ai", text: "Sorry, could not process." }]);
+        } catch (e) {
+            setChat(prev => [...prev.slice(0, -1), { type: "ai", text: "Error connecting to AI." }]);
+        }
+        setTimeout(() => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight), 100);
     };
 
-    // Reset
-    const reset = () => {
-        setView('setup');
-        setLayers([]);
-        setResults(null);
-        setChat([]);
-        setTab('story');
+    const Sidebar = () => (
+        <aside className={`sidebar fixed left-0 top-0 h-screen flex flex-col z-50 ${isMobile ? (mobileMenuOpen ? 'sidebar-expanded' : 'sidebar-collapsed') : (sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed')}`}>
+            <div className="p-4 flex items-center gap-3 border-b border-slate-700/50">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center text-white font-bold animate-glow">S</div>
+                {(sidebarOpen || mobileMenuOpen) && <div><div className="font-bold text-white">SynOmix AI</div><div className="text-xs text-slate-400">v6.0</div></div>}
+            </div>
+            <nav className="flex-1 p-3 space-y-1">
+                {navItems.map(item => (
+                    <button key={item.id} onClick={() => { setCurrentPage(item.id); setMobileMenuOpen(false); }} disabled={item.disabled}
+                        className={`nav-item w-full ${currentPage === item.id ? 'active' : ''} ${item.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <item.icon />{(sidebarOpen || mobileMenuOpen) && <span>{item.label}</span>}
+                    </button>
+                ))}
+            </nav>
+            {!isMobile && (
+                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-4 border-t border-slate-700/50 text-slate-400 hover:text-white flex items-center gap-2">
+                    <div className={`transition-transform ${sidebarOpen ? 'rotate-180' : ''}`}><Icons.ChevronRight /></div>
+                    {sidebarOpen && <span>Collapse</span>}
+                </button>
+            )}
+        </aside>
+    );
+
+    const MobileHeader = () => (
+        <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 flex items-center justify-between px-4 z-40">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-white">{mobileMenuOpen ? <Icons.X /> : <Icons.Menu />}</button>
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm">S</div>
+                <span className="font-bold text-white">SynOmix</span>
+            </div>
+            <div className="w-10" />
+        </header>
+    );
+
+    const HomePage = () => (
+        <div className="fade-in space-y-8">
+            <div className="text-center py-12">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center text-5xl animate-float">🧬</div>
+                <h1 className="text-5xl font-bold mb-4"><span className="gradient-text">Multi-Omics</span> Discovery</h1>
+                <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-8">Upload expression, mutations, methylation & more — get integrated biological insights with AI interpretation.</p>
+                <div className="flex justify-center gap-4 flex-wrap">
+                    <button onClick={loadDemo} className="btn-primary text-lg px-8 py-4">🎮 Try Demo Data</button>
+                    <button onClick={() => setCurrentPage('upload')} className="btn-secondary text-lg px-8 py-4">📁 Upload Files</button>
+                </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+                {[{ icon: '🔬', title: 'Multi-Layer Analysis', desc: 'Integrate expression, mutations, methylation, and CNV data' },
+                  { icon: '⭐', title: 'Novel Discovery', desc: 'Identify novel biomarker candidates with multi-omics convergence' },
+                  { icon: '🤖', title: 'AI Interpretation', desc: 'Get intelligent explanations powered by Claude AI' }
+                ].map((f, i) => (<div key={i} className="card p-6 text-center"><div className="text-4xl mb-4">{f.icon}</div><h3 className="text-lg font-bold mb-2">{f.title}</h3><p className="text-slate-400 text-sm">{f.desc}</p></div>))}
+            </div>
+            <div className="card p-6">
+                <h3 className="text-lg font-bold mb-4">Supported Cancer Types</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {Object.entries(CANCER_TYPES).map(([key, val]) => (
+                        <button key={key} onClick={() => setCancerType(key)} className={`p-3 rounded-xl text-center transition ${cancerType === key ? 'bg-cyan-500/20 border border-cyan-500/50' : 'bg-slate-800/50 hover:bg-slate-700/50'}`}>
+                            <div className="text-2xl mb-1">{val.icon}</div><div className="text-xs text-slate-400">{val.name}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
+    const UploadPage = () => (
+        <div className="fade-in space-y-6">
+            <div><h1 className="text-3xl font-bold mb-2">Upload Data</h1><p className="text-slate-400">Add your omics data files for integrated analysis</p></div>
+            <div className="drop-zone p-12 text-center cursor-pointer" onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('dragover'); }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('dragover')}
+                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); handleFiles(e.dataTransfer.files); }}>
+                <input ref={fileRef} type="file" multiple hidden onChange={(e) => handleFiles(e.target.files)} accept=".csv,.tsv,.txt,.cct,.cbt,.gz" />
+                <div className="text-5xl mb-4">📁</div>
+                <p className="text-lg mb-2">Drop files here or click to browse</p>
+                <p className="text-sm text-slate-400">Supports .csv, .tsv, .txt, .cct, .cbt</p>
+            </div>
+            {layers.length > 0 && (
+                <div className="card p-6">
+                    <h3 className="font-bold mb-4">Uploaded Layers ({layers.length})</h3>
+                    <div className="space-y-3">
+                        {layers.map((l, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 flex-wrap gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{LAYER_TYPES[l.type]?.icon}</span>
+                                    <div><div className="font-medium">{l.name || l.file?.name}</div><div className="text-sm text-slate-400">{LAYER_TYPES[l.type]?.name} • {l.genes?.toLocaleString()} genes</div></div>
+                                </div>
+                                <select value={l.type} onChange={(e) => { const n = [...layers]; n[i].type = e.target.value; setLayers(n); }} className="px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-sm text-white">
+                                    {Object.entries(LAYER_TYPES).map(([k, v]) => (<option key={k} value={k}>{v.icon} {v.name}</option>))}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={runAnalysis} disabled={loading} className="btn-primary w-full mt-6 py-4 text-lg">{loading ? '⚡ Processing...' : `⚡ Run Analysis (${layers.length} layers)`}</button>
+                </div>
+            )}
+            <p className="text-center"><button onClick={loadDemo} className="text-cyan-400 hover:underline">🎮 Or try with demo TCGA breast cancer data</button></p>
+        </div>
+    );
+
+    const ResultsPage = () => {
+        if (!results) return <div className="text-center py-20 text-slate-400">No results yet.</div>;
+        const chartData = results.findings?.slice(0, 6).map(f => ({ name: f.gene, value: f.evidence })) || [];
+        return (
+            <div className="fade-in space-y-6">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                    <div><h1 className="text-3xl font-bold mb-2">{results.story?.title}</h1><p className="text-slate-400">{results.story?.subtitle}</p></div>
+                    <button onClick={() => generatePDF(results, layers)} className="btn-secondary flex items-center gap-2"><Icons.Download /> Export PDF</button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    {[{ value: layers.length, label: 'Layers', icon: '📁' }, { value: results.metrics?.novelDiscoveries || 0, label: 'Novel', icon: '⭐' },
+                      { value: results.metrics?.knownAlterations || 0, label: 'Known', icon: '📚' }, { value: results.metrics?.multiOmicsHits || 0, label: 'Multi-Omics', icon: '🔗' },
+                      { value: results.metrics?.pathwaysAffected || 0, label: 'Pathways', icon: '🔀' }, { value: results.hypotheses?.length || 0, label: 'Hypotheses', icon: '💡' }
+                    ].map((m, i) => (<div key={i} className="stat-card card p-4 text-center"><div className="text-xl mb-1">{m.icon}</div><div className="text-2xl font-bold gradient-text">{m.value}</div><div className="text-xs text-slate-400">{m.label}</div></div>))}
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="card p-6"><h3 className="font-bold mb-4">Evidence by Gene</h3><SimpleBarChart data={chartData} /></div>
+                    <div className="card p-6 flex flex-col justify-center">
+                        <h3 className="font-bold mb-4">Discovery Summary</h3>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-cyan-500/10"><span>Novel Candidates</span><span className="text-2xl font-bold text-cyan-400">{results.metrics?.novelDiscoveries || 0}</span></div>
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-violet-500/10"><span>Known Alterations</span><span className="text-2xl font-bold text-violet-400">{results.metrics?.knownAlterations || 0}</span></div>
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-amber-500/10"><span>Pathways Affected</span><span className="text-2xl font-bold text-amber-400">{results.metrics?.pathwaysAffected || 0}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div className="card p-6 bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border-cyan-500/30">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div><div className="text-sm text-slate-400 mb-1">Predicted Subtype</div><div className="text-3xl font-bold gradient-text">{results.subtype?.predicted}</div><p className="text-slate-400 mt-2">{results.subtype?.description}</p></div>
+                        <div className="text-center"><div className="text-4xl font-bold text-cyan-400">{results.subtype?.confidence}%</div><div className="text-sm text-slate-400">confidence</div></div>
+                    </div>
+                </div>
+                <div className="card p-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
+                    <div className="flex items-center gap-4"><div className="text-4xl">⭐</div><div><div className="font-bold text-lg">{results.story?.keyInsight}</div><p className="text-slate-400">{results.story?.summary}</p></div></div>
+                </div>
+                {/* Tumor Microenvironment Section */}
+                {results.deconvolution && (
+                    <div className="card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="font-bold text-lg flex items-center gap-2">🔬 Tumor Microenvironment</h3>
+                                <p className="text-sm text-slate-400">Cell-type composition deconvolved from expression data</p>
+                            </div>
+                            <div className="text-center px-4 py-2 rounded-lg bg-gradient-to-r from-green-500/20 to-cyan-500/20">
+                                <div className="text-2xl font-bold text-green-400">{results.deconvolution?.immunotherapy_score || 0}%</div>
+                                <div className="text-xs text-slate-400">Immunotherapy Score</div>
+                            </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                {Object.entries(results.deconvolution?.cell_fractions || {}).sort((a,b) => b[1] - a[1]).map(([cell, pct]) => (
+                                    <div key={cell} className="flex items-center gap-3">
+                                        <div className="w-32 text-sm text-slate-300">{cell.replace(/_/g, " ")}</div>
+                                        <div className="flex-1 h-6 bg-slate-700 rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-500" style={{
+                                                width: pct + "%",
+                                                background: cell.includes("CD8") || cell.includes("NK") ? "linear-gradient(90deg, #10b981, #06b6d4)" :
+                                                           cell.includes("Treg") || cell.includes("Macro") ? "linear-gradient(90deg, #f59e0b, #ef4444)" :
+                                                           cell.includes("Tumor") ? "linear-gradient(90deg, #8b5cf6, #ec4899)" :
+                                                           "linear-gradient(90deg, #6366f1, #8b5cf6)"
+                                            }}></div>
+                                        </div>
+                                        <div className="w-16 text-right text-sm font-medium">{Number(pct).toFixed(1)}%</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="space-y-3">
+                                <div className="p-4 rounded-lg bg-slate-800/50">
+                                    <div className="text-sm text-slate-400 mb-2">Immune Infiltration</div>
+                                    <div className="text-2xl font-bold text-cyan-400">{Number(results.deconvolution?.immune_infiltration || 0).toFixed(1)}%</div>
+                                    <div className="text-xs text-slate-500">CD8+ T cells + NK cells</div>
+                                </div>
+                                {results.deconvolution?.insights?.map((insight, i) => (
+                                    <div key={i} className={"p-3 rounded-lg text-sm " + (insight.type === "positive" ? "bg-green-500/10 text-green-300" : "bg-amber-500/10 text-amber-300")}>
+                                        {insight.type === "positive" ? "✓ " : "⚠ "}{insight.text}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+            </div>
+        );
+    };
+
+    const GenesPage = () => {
+        if (!results) return null;
+        return (
+            <div className="fade-in space-y-6">
+                <div><h1 className="text-3xl font-bold mb-2">Gene Findings</h1><p className="text-slate-400">Multi-omics convergence analysis results</p></div>
+                <div className="flex gap-2 flex-wrap">
+                    {['All', 'Novel ⭐', 'Known 📚'].map((t, i) => (
+                        <button key={t} onClick={() => setTab(i === 0 ? 'all' : i === 1 ? 'novel' : 'known')} className={`tab-pill ${tab === (i === 0 ? 'all' : i === 1 ? 'novel' : 'known') ? 'active' : ''}`}>{t}</button>
+                    ))}
+                </div>
+                <div className="space-y-4">
+                    {results.findings?.filter(f => tab === 'all' || (tab === 'novel' && f.isNovel) || (tab === 'known' && !f.isNovel)).map((f, i) => (
+                        <div key={i} className="card p-5">
+                            <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                        <span className="text-xl font-bold gradient-text">{f.gene}</span>
+                                        <span className={`px-2 py-0.5 rounded text-xs ${f.confidence === 'HIGH' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>{f.confidence}</span>
+                                        {f.isNovel && <span className="px-2 py-0.5 rounded text-xs bg-violet-500/20 text-violet-300">NOVEL</span>}
+                                    </div>
+                                    <div className="text-slate-400">{f.title}</div>
+                                </div>
+                                <div className="flex gap-1">{f.layers?.map(l => (<span key={l} className="text-xl" title={LAYER_TYPES[l]?.name}>{LAYER_TYPES[l]?.icon}</span>))}</div>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-2 mb-3">
+                                {Object.entries(f.layerDetails || {}).map(([layer, detail]) => (
+                                    <div key={layer} className="px-3 py-2 rounded bg-slate-800/50 text-sm flex items-center gap-2"><span className="text-slate-400">{LAYER_TYPES[layer]?.icon}</span><span>{detail}</span></div>
+                                ))}
+                            </div>
+                            <p className="text-slate-400 text-sm mb-3">{f.biology}</p>
+                            {f.drugs?.length > 0 && (<div className="flex gap-2 flex-wrap">{f.drugs.map(d => (<a key={d} href="https://www.oncokb.org/" target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-sm hover:bg-emerald-500/30">💊 {d}</a>))}</div>)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const PathwaysPage = () => {
+        if (!results) return null;
+        return (
+            <div className="fade-in space-y-6">
+                <div><h1 className="text-3xl font-bold mb-2">Pathway Analysis</h1><p className="text-slate-400">Biological pathway enrichment and status</p></div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    {results.pathways?.map((p, i) => (
+                        <div key={i} className={`card p-5 border-l-4 ${p.status === 'ACTIVATED' ? 'border-rose-500' : 'border-blue-500'}`}>
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-bold text-lg">{p.name}</h4>
+                                <span className={`px-2 py-1 rounded text-xs ${p.status === 'ACTIVATED' ? 'bg-rose-500/20 text-rose-300' : 'bg-blue-500/20 text-blue-300'}`}>{p.status}</span>
+                            </div>
+                            <p className="text-sm text-slate-400 mb-3">{p.impact}</p>
+                            <div className="flex flex-wrap gap-1 mb-3">{p.genes?.map((g, j) => (<span key={g} className={`px-2 py-1 rounded text-xs ${j < p.affected ? 'bg-violet-500/30 text-violet-200' : 'bg-slate-700/50 text-slate-400'}`}>{g}</span>))}</div>
+                            {p.drugs?.length > 0 && (<div className="flex gap-1 flex-wrap">{p.drugs.map(d => (<span key={d} className="text-xs px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded">💊 {d}</span>))}</div>)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const HypothesesPage = () => {
+        if (!results) return null;
+        return (
+            <div className="fade-in space-y-6">
+                <div><h1 className="text-3xl font-bold mb-2">Research Hypotheses</h1><p className="text-slate-400">AI-generated hypotheses based on multi-omics findings</p></div>
+                {(!results.hypotheses || results.hypotheses.length === 0) ? (
+                    <div className="card p-12 text-center"><div className="text-5xl mb-4">💡</div><p className="text-slate-400">No hypotheses generated yet. Run an analysis first.</p></div>
+                ) : (
+                    <div className="space-y-6">
+                        {results.hypotheses.map((h, i) => (
+                            <div key={i} className="card p-6 border-l-4 border-amber-500">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <span className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 mr-2">Hypothesis #{h.rank || i+1}</span>
+                                        <span className={"text-xs px-2 py-1 rounded-full " + (h.confidence === "HIGH" ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300")}>{h.confidence} Confidence</span>
+                                    </div>
+                                    <span className="text-2xl">🧬</span>
+                                </div>
+                                <h3 className="text-xl font-bold gradient-text mb-3">{h.title}</h3>
+                                <div className="mb-4 p-4 rounded-lg bg-slate-800/50">
+                                    <div className="text-sm text-slate-400 mb-1">Hypothesis</div>
+                                    <p className="text-slate-200">{h.hypothesis}</p>
+                                </div>
+                                <div className="mb-4 p-4 rounded-lg bg-slate-800/50">
+                                    <div className="text-sm text-slate-400 mb-1">Supporting Evidence</div>
+                                    <p className="text-slate-300 text-sm">{h.evidence}</p>
+                                </div>
+                                {h.nextSteps && h.nextSteps.length > 0 && (
+                                    <div className="mb-4">
+                                        <div className="text-sm text-slate-400 mb-2">Recommended Next Steps</div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {h.nextSteps.map((step, j) => (
+                                                <div key={j} className="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 text-sm">
+                                                    <span className="text-green-400">→</span>
+                                                    <span className="text-slate-300">{step}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-4 pt-4 border-t border-slate-700">
+                                    <span className="text-xs text-slate-500">Publication Potential: <strong className={h.publicationPotential === "HIGH" ? "text-green-400" : "text-yellow-400"}>{h.publicationPotential}</strong></span>
+                                    {h.gene && <span className="text-xs text-slate-500">Gene: <strong className="text-cyan-400">{h.gene}</strong></span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const AIPage = () => {
+        if (!results) return null;
+        return (
+            <div className="fade-in flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
+                <div className="mb-4"><h1 className="text-3xl font-bold mb-2">AI Assistant</h1><p className="text-slate-400">Ask questions about your analysis results</p></div>
+                <div ref={chatRef} className="flex-1 overflow-y-auto space-y-3 p-4 rounded-xl bg-slate-900/50 mb-4">
+                    {chat.length === 0 && (
+                        <div className="py-8 text-center">
+                            <div className="text-5xl mb-4">🤖</div>
+                            <p className="text-slate-400 mb-6">Ask me anything about your analysis!</p>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {["What are the key findings?", "Explain the subtype", "Treatment options?", "Tell me about PIK3CA"].map(q => (
+                                    <button key={q} onClick={() => { setQuery(q); }} className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">{q}</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {chat.map((m, i) => (
+                        <div key={i} className={`flex ${m.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${m.type === 'user' ? 'bg-gradient-to-r from-cyan-600 to-violet-600 text-white' : 'bg-slate-800 text-white'}`}>
+                                <div className="whitespace-pre-wrap text-sm">{m.text}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex gap-3">
+                    <input ref={queryRef} defaultValue="" onKeyPress={e => e.key === 'Enter' && handleQuery()} placeholder="Ask about genes, subtypes, pathways..." className="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:border-cyan-500 text-white placeholder-slate-400 outline-none" />
+                    <button onClick={handleQuery} disabled={false} className="btn-primary px-6">Send</button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderPage = () => {
+        switch (currentPage) {
+            case 'home': return <HomePage />;
+            case 'upload': return <UploadPage />;
+            case 'results': return <ResultsPage />;
+            case 'genes': return <GenesPage />;
+            case 'pathways': return <PathwaysPage />;
+            case 'hypotheses': return <HypothesesPage />;
+            case 'ai': return <AIPage />;
+            default: return <HomePage />;
+        }
     };
 
     return (
-        <div className="min-h-screen">
-            {/* Header */}
-            <header className="glass sticky top-0 z-50 border-b border-purple-500/20">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center text-xl font-bold animate-glow">S</div>
-                        <div>
-                            <h1 className="text-xl font-bold gradient-text">SynOmix AI</h1>
-                            <p className="text-xs text-purple-300/60">Multi-Omics Discovery Platform v3.0</p>
-                        </div>
-                    </div>
-                    {view !== 'setup' && (
-                        <button onClick={reset} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm">
-                            ← Start Over
-                        </button>
-                    )}
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-6 py-8">
-                {/* Setup View */}
-                {view === 'setup' && (
-                    <div className="fade-in max-w-3xl mx-auto text-center py-12">
-                        <div className="float mb-8">
-                            <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center text-5xl glow-purple">🧬</div>
-                        </div>
-                        <h1 className="text-5xl font-bold mb-4">
-                            <span className="gradient-text">Multi-Omics</span> Discovery
-                        </h1>
-                        <p className="text-xl text-purple-200/60 mb-12 max-w-xl mx-auto">
-                            Upload expression, mutations, methylation & more — get integrated biological insights with AI interpretation.
-                        </p>
-                        
-                        <div className="flex justify-center gap-4 mb-12">
-                            <button onClick={loadDemo} className="btn-primary px-8 py-4 rounded-2xl text-lg font-semibold">
-                                🎮 Try Demo Data
-                            </button>
-                            <button onClick={() => setView('upload')} className="px-8 py-4 rounded-2xl text-lg font-semibold bg-white/5 hover:bg-white/10 border border-purple-500/30">
-                                📂 Upload Your Data
-                            </button>
-                        </div>
-
-                        <div className="card p-8">
-                            <h3 className="text-lg font-semibold mb-6">Supported Omics Layers</h3>
-                            <div className="grid grid-cols-5 gap-4">
-                                {Object.entries(LAYER_TYPES).map(([k, v]) => (
-                                    <div key={k} className="text-center p-4 rounded-xl bg-white/5">
-                                        <div className="text-3xl mb-2">{v.icon}</div>
-                                        <div className="font-medium text-sm">{v.name}</div>
-                                        <div className="text-xs text-purple-300/50">{v.desc}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Upload View */}
-                {view === 'upload' && (
-                    <div className="fade-in max-w-4xl mx-auto">
-                        <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold mb-2">Upload <span className="gradient-text">Omics Layers</span></h2>
-                            <p className="text-purple-200/60">Add multiple data files for integrated multi-omics analysis</p>
-                        </div>
-
-                        {/* Cancer Type Selector */}
-                        <div className="card p-6 mb-6">
-                            <h3 className="text-lg font-semibold mb-4">🎯 Select Cancer Type</h3>
-                            <div className="grid grid-cols-5 gap-3">
-                                {Object.entries(CANCER_TYPES).map(([key, info]) => (
-                                    <button
-                                        key={key}
-                                        onClick={() => setCancerType(key)}
-                                        className={`p-3 rounded-xl text-center transition ${
-                                            cancerType === key 
-                                                ? 'bg-violet-500/30 border-2 border-violet-500' 
-                                                : 'bg-white/5 border-2 border-transparent hover:bg-white/10'
-                                        }`}
-                                    >
-                                        <div className="text-2xl mb-1">{info.icon}</div>
-                                        <div className="text-xs font-medium">{info.name}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Drop Zone */}
-                        <div 
-                            onClick={() => fileRef.current?.click()}
-                            onDragOver={onDragOver}
-                            onDragLeave={onDragLeave}
-                            onDrop={onDrop}
-                            className={`drop-zone card p-12 text-center cursor-pointer mb-6 ${dragOver ? 'dragover' : ''}`}
-                        >
-                            <div className="text-6xl mb-4">📂</div>
-                            <p className="text-xl font-medium mb-2">Drop files here or click to upload</p>
-                            <p className="text-purple-300/50 mb-4">Upload multiple files - each becomes a separate omics layer</p>
-                            <div className="flex justify-center gap-2 flex-wrap">
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.csv</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.tsv</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.cct</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.cbt</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.vcf</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-sm">.gz</span>
-                            </div>
-                        </div>
-                        <input 
-                            ref={fileRef} 
-                            type="file" 
-                            multiple 
-                            onChange={onFileChange}
-                            className="hidden" 
-                            accept=".csv,.tsv,.txt,.cct,.cbt,.vcf,.gz,.bed,.maf"
-                        />
-
-                        {/* Uploaded Layers */}
-                        {layers.length > 0 && (
-                            <div className="mb-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold">📁 Uploaded Layers ({layers.length})</h3>
-                                    <button onClick={() => fileRef.current?.click()} className="text-sm text-violet-400 hover:underline">
-                                        + Add more files
-                                    </button>
-                                </div>
-                                <div className="space-y-3">
-                                    {layers.map((l, i) => (
-                                        <div key={i} className="card p-4 flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center text-2xl">
-                                                {LAYER_TYPES[l.type]?.icon || '📄'}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium truncate">{l.file}</div>
-                                                <div className="text-sm text-purple-300/50">
-                                                    {l.genes?.toLocaleString()} genes × {l.samples?.toLocaleString()} samples
-                                                    {l.size && <span className="ml-2">({l.size})</span>}
-                                                </div>
-                                            </div>
-                                            <select 
-                                                value={l.type}
-                                                onChange={(e) => updateLayerType(i, e.target.value)}
-                                                className="px-3 py-2 rounded-lg bg-white/5 border border-purple-500/30 text-sm"
-                                            >
-                                                {Object.entries(LAYER_TYPES).map(([k, v]) => (
-                                                    <option key={k} value={k}>{v.icon} {v.name}</option>
-                                                ))}
-                                            </select>
-                                            <button onClick={() => removeLayer(i)} className="text-purple-300/50 hover:text-red-400 text-xl px-2">×</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Layer Summary */}
-                        {layers.length > 0 && (
-                            <div className="card p-4 mb-6 flex items-center justify-between">
-                                <div className="flex gap-4">
-                                    {Object.entries(LAYER_TYPES).map(([k, v]) => {
-                                        const count = layers.filter(l => l.type === k).length;
-                                        if (count === 0) return null;
-                                        return (
-                                            <div key={k} className="flex items-center gap-2">
-                                                <span className="text-xl">{v.icon}</span>
-                                                <span className="text-sm">{count} {v.name}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div className="text-sm text-purple-300/50">
-                                    {layers.length} total layer{layers.length > 1 ? 's' : ''}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex flex-col items-center gap-4">
-                            {layers.length > 0 && (
-                                <button 
-                                    onClick={runAnalysis} 
-                                    disabled={loading}
-                                    className="btn-primary px-10 py-4 rounded-2xl text-lg font-semibold disabled:opacity-50"
-                                >
-                                    {loading ? (
-                                        <span className="flex items-center gap-2"><span className="pulse">⚡</span> {uploadProgress || 'Processing...'}</span>
-                                    ) : (
-                                        `⚡ Run Multi-Omics Analysis (${layers.length} layers)`
-                                    )}
-                                </button>
-                            )}
-                            {loading && uploadProgress && (
-                                <div className="text-sm text-purple-300/60">{uploadProgress}</div>
-                            )}
-                        </div>
-
-                        {layers.length === 0 && (
-                            <p className="text-center mt-6">
-                                <button onClick={loadDemo} className="text-violet-400 hover:underline">
-                                    🎮 Or try with demo TCGA breast cancer data (3 layers)
-                                </button>
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {/* Results View */}
-                {view === 'results' && results && (
-                    <div className="fade-in">
-                        {/* Metrics */}
-                        <div className="grid grid-cols-6 gap-4 mb-6">
-                            {[
-                                { value: layers.length, label: 'Layers', icon: '📁' },
-                                { value: results.metrics?.novelDiscoveries || results.findings?.filter(f => f.isNovel).length || 0, label: 'Novel', icon: '⭐' },
-                                { value: results.metrics?.knownAlterations || results.findings?.filter(f => !f.isNovel).length || 0, label: 'Known', icon: '📚' },
-                                { value: results.metrics?.multiOmicsHits || 0, label: 'Multi-Omics', icon: '🔗' },
-                                { value: results.metrics?.pathwaysAffected || results.pathways?.length || 0, label: 'Pathways', icon: '🔀' },
-                                { value: results.hypotheses?.length || 0, label: 'Hypotheses', icon: '💡' },
-                            ].map((m, i) => (
-                                <div key={i} className="card p-4 text-center">
-                                    <div className="text-xl mb-1">{m.icon}</div>
-                                    <div className="text-2xl font-bold gradient-amber">{m.value}</div>
-                                    <div className="text-xs text-purple-300/50">{m.label}</div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Discovery Banner */}
-                        <div className="card p-6 mb-6 glow-amber bg-gradient-to-r from-amber-900/30 to-orange-900/30 border-amber-500/30">
-                            <div className="flex items-start gap-6">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-2xl flex-shrink-0">🔬</div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold mb-1">{results.story.title}</h2>
-                                    <p className="text-purple-200/60 mb-3">{results.story.subtitle}</p>
-                                    <p className="text-purple-100/80 mb-3">{results.story.summary}</p>
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-300">
-                                        ⭐ {results.story.keyInsight}
-                                    </div>
-                                </div>
-                                <button onClick={function() { generatePDF(results, layers, cancerType, CANCER_TYPES); }} className="btn-primary px-4 py-2 rounded-xl flex items-center gap-2 text-sm flex-shrink-0">📄 Export PDF</button>
-                            </div>
-                        </div>
-
-                        {/* Tabs */}
-                        <div className="flex gap-2 mb-6 flex-wrap">
-                            {[
-                                { id: 'story', icon: '🔬', label: 'Discovery' },
-                                { id: 'findings', icon: '⭐', label: 'Novel Genes' },
-                                { id: 'hypotheses', icon: '💡', label: 'Hypotheses' },
-                                { id: 'pathways', icon: '🔀', label: 'Pathways' },
-                                { id: 'ai', icon: '🤖', label: 'AI Query' },
-                            ].map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setTab(t.id)}
-                                    className={`px-5 py-3 rounded-xl font-medium transition ${
-                                        tab === t.id ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'bg-white/5 text-purple-300/70 hover:bg-white/10'
-                                    }`}
-                                >
-                                    {t.icon} {t.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Tab Content */}
-                        <div className="card p-6">
-                            {/* Discovery Overview Tab */}
-                            {tab === 'story' && (
-                                <div>
-                                    <h3 className="text-2xl font-bold mb-6">🔬 Discovery Overview</h3>
-                                    
-                                    {/* Subtype */}
-                                    <div className="card p-6 mb-6 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border-violet-500/30">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div>
-                                                <div className="text-sm text-purple-300/60 mb-1 flex items-center gap-1">
-                                                    {results.subtype.cancerType || CANCER_TYPES[cancerType]?.name} — Molecular Subtype
-                                                    <InfoTip title={METHODOLOGY.subtype.title}>{METHODOLOGY.subtype.text}</InfoTip>
-                                                </div>
-                                                <div className="text-3xl font-bold gradient-text">{results.subtype.predicted}</div>
-                                            </div>
-                                            <div className="stat-ring">
-                                                <div className="text-center">
-                                                    <div className="text-xl font-bold">{results.subtype.confidence}%</div>
-                                                    <div className="text-xs text-purple-300/50">conf</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <p className="text-purple-200/70 mb-4">{results.subtype.description}</p>
-                                        
-                                        {results.subtype.treatment && (
-                                            <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                                                <div className="text-sm text-green-300/70 mb-1">Recommended Treatment Approach</div>
-                                                <div className="text-green-200 font-medium">{results.subtype.treatment}</div>
-                                            </div>
-                                        )}
-                                        
-                                        {results.subtype.markers?.length > 0 && (
-                                            <div className="grid grid-cols-4 gap-3">
-                                                {results.subtype.markers.map((m, i) => (
-                                                    <div key={i} className={`p-3 rounded-lg bg-white/5`}>
-                                                        <div className="font-medium">{m.gene}</div>
-                                                        <div className="text-sm text-purple-300/50">{m.observed}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Layers Used */}
-                                    <h4 className="font-semibold mb-3">📊 Data Layers Integrated</h4>
-                                    <div className="grid grid-cols-3 gap-4 mb-6">
-                                        {layers.map((l, i) => (
-                                            <div key={i} className="card p-4 flex items-center gap-3">
-                                                <span className="text-2xl">{LAYER_TYPES[l.type]?.icon}</span>
-                                                <div>
-                                                    <div className="font-medium">{LAYER_TYPES[l.type]?.name}</div>
-                                                    <div className="text-sm text-purple-300/50">{l.genes?.toLocaleString()} genes</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Narrative - Dynamic based on actual findings */}
-                                    <h4 className="font-semibold mb-3">🧬 What The Data Shows</h4>
-                                    <div className="space-y-4 text-purple-200/80">
-                                        {results.findings.slice(0, 3).map((f, i) => (
-                                            <p key={i}>
-                                                <strong className="text-white">{f.gene} shows significant alterations</strong> — 
-                                                {f.layers && f.layers.length > 1 
-                                                    ? ` detected across ${f.layers.length} data layers (${f.layers.join(', ')}). `
-                                                    : ` detected in ${f.layers?.[0] || 'analysis'}. `}
-                                                {f.findings && f.findings.length > 0 
-                                                    ? f.findings.join(', ') + '. '
-                                                    : ''}
-                                                {f.isNovel 
-                                                    ? 'This is a novel candidate not commonly reported in cancer databases.'
-                                                    : f.drugs && f.drugs.length > 0 
-                                                        ? `Known target with potential therapeutic options (${f.drugs.join(', ')}).`
-                                                        : 'This is a known cancer-associated gene.'}
-                                            </p>
-                                        ))}
-                                        {results.findings.length === 0 && (
-                                            <p>Upload multi-omics data to see integrated findings and biological interpretation.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Findings Tab */}
-                            {tab === 'findings' && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <h3 className="text-2xl font-bold">🔬 Key Multi-Omics Findings</h3>
-                                        <InfoTip title="How Findings Are Identified">
-                                            Genes are ranked by evidence across multiple data layers. A gene appearing in 2+ layers (e.g., mutated AND overexpressed) receives higher priority. Known cancer genes (biomarkers) are highlighted.
-                                        </InfoTip>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {results.findings.map((f, i) => (
-                                            <div key={i} className="insight-card card p-5">
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <div>
-                                                        <div className="flex items-center gap-3 mb-1">
-                                                            <span className="text-xl font-bold gradient-text">{f.gene}</span>
-                                                            <span className={`px-2 py-0.5 rounded text-xs ${f.confidence === 'HIGH' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'}`}>
-                                                                {f.confidence}
-                                                            </span>
-                                                            <InfoTip title={METHODOLOGY.confidence.title}>{METHODOLOGY.confidence.text}</InfoTip>
-                                                        </div>
-                                                        <div className="text-purple-200/70">{f.title}</div>
-                                                    </div>
-                                                    <div className="flex gap-1">
-                                                        {f.layers.map(l => <span key={l} className="text-xl" title={LAYER_TYPES[l]?.name}>{LAYER_TYPES[l]?.icon}</span>)}
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 mb-3">
-                                                    {Object.entries(f.layerDetails).map(([layer, detail]) => (
-                                                        <div key={layer} className="px-3 py-2 rounded bg-white/5 text-sm flex items-center gap-2">
-                                                            <span className="text-purple-300/50">{LAYER_TYPES[layer]?.icon}</span> 
-                                                            <span>{detail}</span>
-                                                            {layer === 'expression' && detail.includes('variance') && <InfoTip title={METHODOLOGY.highVariance.title}>{METHODOLOGY.highVariance.text}</InfoTip>}
-                                                            {layer === 'mutation' && <InfoTip title={METHODOLOGY.mutationFreq.title}>{METHODOLOGY.mutationFreq.text}</InfoTip>}
-                                                            {layer === 'methylation' && detail.includes('hyper') && <InfoTip title={METHODOLOGY.hypermethylated.title}>{METHODOLOGY.hypermethylated.text}</InfoTip>}
-                                                            {layer === 'methylation' && detail.includes('hypo') && <InfoTip title={METHODOLOGY.hypomethylated.title}>{METHODOLOGY.hypomethylated.text}</InfoTip>}
-                                                            {layer === 'cnv' && detail.includes('amplified') && <InfoTip title={METHODOLOGY.amplified.title}>{METHODOLOGY.amplified.text}</InfoTip>}
-                                                            {layer === 'cnv' && detail.includes('deleted') && <InfoTip title={METHODOLOGY.deleted.title}>{METHODOLOGY.deleted.text}</InfoTip>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <p className="text-purple-200/60 text-sm mb-3">{f.biology}</p>
-                                                {f.drugs?.length > 0 && (
-                                                    <div className="flex gap-2 flex-wrap">
-                                                        {f.drugs.map(d => (
-                                                            <a key={d} href={`https://www.oncokb.org/`} target="_blank" rel="noopener noreferrer" 
-                                                               className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-sm hover:bg-green-500/30 transition">
-                                                                💊 {d} ↗
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Pathways Tab */}
-                            {tab === 'pathways' && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <h3 className="text-2xl font-bold">🔀 Pathway Analysis</h3>
-                                        <InfoTip title="Pathway Enrichment Analysis">
-                                            Pathways are scored by the proportion of their genes showing alterations. A pathway with 3/5 genes altered scores 60%. Status is ACTIVATED (oncogenic pathways turned on) or IMPAIRED (protective pathways turned off).
-                                        </InfoTip>
-                                    </div>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        {results.pathways.map((p, i) => (
-                                            <div key={i} className={`card p-4 border-l-4 ${
-                                                p.status === 'ACTIVATED' ? 'border-red-500' : p.status === 'IMPAIRED' ? 'border-blue-500' : 'border-gray-500'
-                                            }`}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h4 className="font-bold">{p.name}</h4>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className={`px-2 py-0.5 rounded text-xs ${
-                                                            p.status === 'ACTIVATED' ? 'bg-red-500/20 text-red-300' : p.status === 'IMPAIRED' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20'
-                                                        }`}>{p.status}</span>
-                                                        <InfoTip title={p.status === 'ACTIVATED' ? METHODOLOGY.pathwayActivated.title : METHODOLOGY.pathwayImpaired.title}>
-                                                            {p.status === 'ACTIVATED' ? METHODOLOGY.pathwayActivated.text : METHODOLOGY.pathwayImpaired.text}
-                                                        </InfoTip>
-                                                    </div>
-                                                </div>
-                                                <p className="text-sm text-purple-200/50 mb-2">{p.impact}</p>
-                                                <div className="flex flex-wrap gap-1 mb-2">
-                                                    {p.genes.map((g, j) => (
-                                                        <span key={g} className={`px-2 py-0.5 rounded text-xs ${j < p.affected ? 'bg-violet-500/30 text-violet-200' : 'bg-white/5 text-purple-300/40'}`}>{g}</span>
-                                                    ))}
-                                                </div>
-                                                {p.drugs?.length > 0 && (
-                                                    <div className="flex gap-1">
-                                                        {p.drugs.map(d => <span key={d} className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded">💊 {d}</span>)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Hypotheses Tab */}
-                            {tab === 'hypotheses' && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <h3 className="text-2xl font-bold">💡 Research Hypotheses</h3>
-                                        <InfoTip title="How Hypotheses Are Generated">
-                                            Hypotheses are generated based on multi-omics convergence, statistical significance, and biological plausibility. Novel genes with FDR &lt; 0.05 and multiple supporting data layers are prioritized.
-                                        </InfoTip>
-                                    </div>
-                                    
-                                    <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
-                                        <span className="text-xl">📝</span>
-                                        <div className="text-sm text-amber-200/80">
-                                            <strong>Publication-Ready Hypotheses.</strong> These hypotheses are generated from your data and can serve as starting points for further investigation, grant applications, or manuscript development.
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="space-y-6">
-                                        {(results.hypotheses || []).map((h, i) => (
-                                            <div key={i} className="card p-6 border-l-4 border-amber-500">
-                                                <div className="flex items-start justify-between mb-4">
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-300">Hypothesis #{h.rank}</span>
-                                                            <span className={'text-xs px-2 py-1 rounded-full ' + (h.confidence === 'HIGH' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300')}>{h.confidence} Confidence</span>
-                                                        </div>
-                                                        <h4 className="text-xl font-bold gradient-amber">{h.title}</h4>
-                                                    </div>
-                                                    <span className="text-3xl">{h.gene && h.gene.length < 10 ? '🧬' : '🔀'}</span>
-                                                </div>
-                                                
-                                                <div className="mb-4 p-4 rounded-lg bg-white/5">
-                                                    <div className="text-sm text-purple-300/70 mb-1">Hypothesis</div>
-                                                    <p className="text-purple-100">{h.hypothesis}</p>
-                                                </div>
-                                                
-                                                <div className="mb-4 p-4 rounded-lg bg-white/5">
-                                                    <div className="text-sm text-purple-300/70 mb-1">Supporting Evidence</div>
-                                                    <p className="text-purple-200/80 text-sm">{h.evidence}</p>
-                                                </div>
-                                                
-                                                <div className="mb-4">
-                                                    <div className="text-sm text-purple-300/70 mb-2">Recommended Next Steps</div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {(h.nextSteps || []).map((step, j) => (
-                                                            <div key={j} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 text-sm">
-                                                                <span className="text-green-400">→</span>
-                                                                <span className="text-purple-200/80">{step}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-4 pt-4 border-t border-purple-500/20">
-                                                    <span className="text-xs text-purple-300/50">Publication Potential: <strong className={h.publicationPotential === 'HIGH' ? 'text-green-400' : 'text-yellow-400'}>{h.publicationPotential}</strong></span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    
-                                    {(!results.hypotheses || results.hypotheses.length === 0) && (
-                                        <div className="text-center py-12 text-purple-300/50">
-                                            <span className="text-4xl mb-4 block">💡</span>
-                                            <p>No strong hypotheses generated from this dataset.</p>
-                                            <p className="text-sm">Try uploading more data layers for better multi-omics convergence.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* AI Query Tab */}
-                            {tab === 'ai' && (
-                                <div className="flex flex-col h-[550px]">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xl">🤖</div>
-                                        <div>
-                                            <h3 className="text-lg font-bold">AI Analysis Assistant</h3>
-                                            <p className="text-sm text-purple-300/50">Ask questions about your results</p>
-                                        </div>
-                                    </div>
-
-                                    <div ref={chatRef} className="flex-1 overflow-y-auto scrollbar mb-4 space-y-3 p-4 rounded-xl bg-black/20">
-                                        {chat.length === 0 && (
-                                            <div className="py-4">
-                                                <div className="text-center mb-6">
-                                                    <div className="text-4xl mb-2">🧬</div>
-                                                    <p className="text-purple-200/60">Ask me anything about your analysis!</p>
-                                                </div>
-                                                
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <div className="text-xs text-purple-300/50 mb-2 uppercase tracking-wide">📊 Subtype & Classification</div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {[
-                                                                `Why ${results?.subtype?.predicted || 'this subtype'}?`,
-                                                                "What are the other possible subtypes?",
-                                                                "How is confidence calculated?"
-                                                            ].map(s => (
-                                                                <button key={s} onClick={() => { setQuery(s); handleQuery(); }} className="px-3 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-sm text-left">{s}</button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div>
-                                                        <div className="text-xs text-purple-300/50 mb-2 uppercase tracking-wide">🔬 Gene Deep-Dive</div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {(results?.findings?.slice(0,3).map(f => f.gene) || ['PIK3CA', 'ERBB2', 'TP53']).map(g => (
-                                                                <button key={g} onClick={() => { setQuery(`Tell me about ${g}`); handleQuery(); }} className="px-3 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-sm">Explain {g}</button>
-                                                            ))}
-                                                            <button onClick={() => { setQuery("Compare the top findings"); handleQuery(); }} className="px-3 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-sm">Compare all</button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div>
-                                                        <div className="text-xs text-purple-300/50 mb-2 uppercase tracking-wide">💊 Treatment & Pathways</div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {[
-                                                                "What are my treatment options?",
-                                                                "Which targets are actionable?",
-                                                                "Explain the pathways"
-                                                            ].map(s => (
-                                                                <button key={s} onClick={() => { setQuery(s); handleQuery(); }} className="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-sm">{s}</button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {chat.map((m, i) => (
-                                            <div key={i} className={`flex ${m.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`max-w-[85%] px-4 py-3 rounded-2xl ${
-                                                    m.type === 'user' ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white' : 'bg-white/10'
-                                                }`}>
-                                                    <div className="whitespace-pre-wrap text-sm">{m.text}</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <input
-                                            value={query}
-                                            onChange={e => setQuery(e.target.value)}
-                                            onKeyPress={e => e.key === 'Enter' && handleQuery()}
-                                            placeholder="Ask about genes, subtypes, pathways, treatments..."
-                                            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-purple-500/30 focus:border-purple-500 text-white placeholder-purple-300/30"
-                                        />
-                                        <button onClick={handleQuery} disabled={!query.trim()} className="btn-primary px-6 py-3 rounded-xl font-semibold disabled:opacity-50">
-                                            Ask
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+        <div className="min-h-screen relative z-10">
+            {isMobile && <MobileHeader />}
+            {isMobile && mobileMenuOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMobileMenuOpen(false)} />}
+            <Sidebar />
+            <main className={`transition-all duration-300 ${isMobile ? 'pt-20 px-4 pb-6' : (sidebarOpen ? 'ml-[260px]' : 'ml-[72px]')} p-8`}>
+                <div className="max-w-6xl mx-auto">{renderPage()}</div>
             </main>
-
-            <footer className="border-t border-purple-500/10 py-6 text-center text-sm text-purple-300/50">
-                <p className="mb-2">SynOmix AI v3.0 • Multi-Omics Discovery • Research Use Only</p>
-                <p className="text-purple-300/70">
-                    Got feedback? Let's connect! → 
-                    <a href="https://www.linkedin.com/in/rohitpk/" target="_blank" rel="noopener noreferrer" 
-                       className="text-purple-400 hover:text-purple-300 underline ml-1">
-                        LinkedIn
-                    </a>
-                </p>
-            </footer>
-
-            {/* Floating Connect Button */}
-            <a 
-                href="https://www.linkedin.com/in/rohitpk/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center gap-2 z-50"
-            >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                <span className="font-medium">Connect</span>
+            <a href="https://www.linkedin.com/in/rohitpk/" target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-3 rounded-full shadow-lg flex items-center gap-2 z-50">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v6.067H9.351V9h3.414v6.061h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.086zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                <span className="font-medium hidden sm:inline">Connect</span>
             </a>
         </div>
     );

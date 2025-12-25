@@ -360,6 +360,76 @@ BIOMARKERS.update({
 
 BIOMARKER_SET = set(BIOMARKERS.keys())
 
+# Cell-type marker signatures for deconvolution (based on literature)
+CELL_TYPE_SIGNATURES = {
+    "Tumor_Epithelial": ["EPCAM", "KRT8", "KRT18", "KRT19", "MUC1", "CDH1", "CLDN4", "CLDN7"],
+    "CD8_T_Cells": ["CD8A", "CD8B", "GZMA", "GZMB", "PRF1", "IFNG", "CXCR3", "CCL5"],
+    "CD4_T_Cells": ["CD4", "IL7R", "CCR7", "LEF1", "TCF7", "SELL", "CD40LG"],
+    "Tregs": ["FOXP3", "IL2RA", "CTLA4", "IKZF2", "CCR8", "TNFRSF18"],
+    "B_Cells": ["CD19", "CD79A", "CD79B", "MS4A1", "PAX5", "BANK1", "BLK"],
+    "NK_Cells": ["NCAM1", "NKG7", "KLRD1", "KLRF1", "GNLY", "FCGR3A", "NCR1"],
+    "Macrophages": ["CD68", "CD163", "CSF1R", "MARCO", "MSR1", "MRC1", "CD14"],
+    "Dendritic_Cells": ["ITGAX", "CD1C", "CLEC9A", "FLT3", "BATF3", "IRF8"],
+    "Fibroblasts": ["FAP", "PDGFRA", "PDGFRB", "COL1A1", "COL1A2", "ACTA2", "THY1"],
+    "Endothelial": ["PECAM1", "VWF", "CDH5", "ENG", "KDR", "FLT1", "MCAM"],
+}
+
+def deconvolve_cell_types(df: pd.DataFrame) -> Dict:
+    """Estimate cell-type proportions from bulk expression using signature scoring"""
+    gene_index = set(df.index.str.upper())
+    
+    # Calculate signature scores for each cell type
+    cell_scores = {}
+    for cell_type, markers in CELL_TYPE_SIGNATURES.items():
+        present_markers = [m for m in markers if m in gene_index]
+        if len(present_markers) >= 2:
+            marker_expr = []
+            for m in present_markers:
+                if m in df.index:
+                    marker_expr.append(float(df.loc[m].mean()))
+                elif m.upper() in df.index:
+                    marker_expr.append(float(df.loc[m.upper()].mean()))
+            if marker_expr:
+                cell_scores[cell_type] = float(np.mean(marker_expr))
+            else:
+                cell_scores[cell_type] = 0.0
+        else:
+            cell_scores[cell_type] = 0.0
+    
+    # Normalize to proportions
+    total = float(sum(max(s, 0.01) for s in cell_scores.values()))
+    if total > 0:
+        cell_fractions = {k: float(round(max(float(v), 0.01) / total * 100, 1)) for k, v in cell_scores.items()}
+    else:
+        cell_fractions = {k: 10.0 for k in cell_scores.keys()}
+    
+    # Calculate immunotherapy-relevant metrics
+    immune_infiltration = float(cell_fractions.get("CD8_T_Cells", 0) + cell_fractions.get("NK_Cells", 0))
+    immunosuppressive = float(cell_fractions.get("Tregs", 0) + cell_fractions.get("Macrophages", 0) * 0.3)
+    
+    # Generate insights
+    insights = []
+    if cell_fractions.get("CD8_T_Cells", 0) > 15:
+        insights.append({"type": "positive", "text": "High CD8+ T cell infiltration suggests potential immunotherapy responsiveness"})
+    if cell_fractions.get("Tregs", 0) > 10:
+        insights.append({"type": "warning", "text": "Elevated Tregs may indicate immunosuppressive microenvironment"})
+    if cell_fractions.get("Fibroblasts", 0) > 20:
+        insights.append({"type": "warning", "text": "High fibroblast content suggests stromal-rich tumor, possible therapy resistance"})
+    if immune_infiltration > 25:
+        insights.append({"type": "positive", "text": "Strong immune infiltration - consider checkpoint inhibitor therapy"})
+    
+    itx_score = int(min(100, max(0, immune_infiltration * 2 - immunosuppressive + 30)))
+    
+    return {
+        "cell_fractions": cell_fractions,
+        "immune_infiltration": float(round(immune_infiltration, 1)),
+        "immunosuppressive_score": float(round(immunosuppressive, 1)),
+        "immunotherapy_score": itx_score,
+        "insights": insights,
+        "markers_detected": {ct: len([m for m in markers if m in gene_index]) for ct, markers in CELL_TYPE_SIGNATURES.items()}
+    }
+
+
 
 def detect_layer_type(filename: str) -> str:
     f = filename.lower()
@@ -388,7 +458,7 @@ def parse_file(contents: bytes, filename: str) -> pd.DataFrame:
     # Read full file
     df = pd.read_csv(io.StringIO(text), sep=sep, index_col=0, low_memory=False)
     df.columns = df.columns.astype(str).str.strip()
-    df.index = df.index.astype(str).str.strip()
+    df.index = df.index.astype(str).str.strip().str.split('|').str[0]
     
     # Convert to numeric (float32 to save memory)
     df = df.apply(pd.to_numeric, errors='coerce').astype('float32')
@@ -674,7 +744,7 @@ def predict_subtype(layer_results: Dict, cancer_type: str = 'breast') -> Dict:
 
 @app.get("/api")
 def api_root():
-    return {"api": "SynOmix AI", "version": "3.1.0-fast"}
+    return {"api": "SynOmix AI", "version": "6.0.0"}
 
 
 @app.post("/api/experiment/create")
@@ -716,6 +786,8 @@ async def analyze_experiment(exp_id: str):
     for layer_type, df in layers.items():
         if layer_type == 'expression':
             layer_results['expression'] = analyze_expression_fast(df)
+            # Run cell-type deconvolution on expression data
+            layer_results['deconvolution'] = deconvolve_cell_types(df)
         elif layer_type == 'mutation':
             layer_results['mutation'] = analyze_mutations_fast(df)
         elif layer_type == 'methylation':
@@ -741,6 +813,7 @@ async def analyze_experiment(exp_id: str):
             "actionable_targets": len([i for i in integrated if i.get('actionable')]),
             "pathways_enriched": len(pathways),
             "predicted_subtype": subtype["predicted"],
+            "immune_score": layer_results.get("deconvolution", {}).get("immunotherapy_score", 0),
             "confidence": subtype["confidence"]
         },
         "layer_results": layer_results,
@@ -772,3 +845,62 @@ async def serve_frontend():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+
+# Claude AI Chat Endpoint
+import anthropic
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+
+# Claude AI Chat Endpoint
+import anthropic
+from pydantic import BaseModel
+
+class ChatRequest(BaseModel):
+    query: str
+    results: dict = {}
+
+
+from fastapi.responses import StreamingResponse
+
+@app.post("/api/chat")
+async def chat_with_claude(request: ChatRequest):
+    async def generate():
+        try:
+            api_key = None
+            with open("/var/www/synomix/.env") as f:
+                for line in f:
+                    if line.startswith("ANTHROPIC_API_KEY="):
+                        api_key = line.strip().split("=", 1)[1]
+                        break
+            
+            if not api_key:
+                yield "data: AI service not configured.\n\n"
+                return
+            
+            client = anthropic.Anthropic(api_key=api_key)
+            
+            context = f"""You are an AI assistant for SynOmix, a multi-omics biomarker discovery platform.
+
+The user has run an analysis with these results:
+- Subtype: {request.results.get('subtype', {}).get('predicted', 'Unknown')}
+- Confidence: {request.results.get('subtype', {}).get('confidence', 0)}%
+- Top findings: {[f.get('gene', '') for f in request.results.get('findings', [])[:5]]}
+- Pathways affected: {[p.get('name', '') for p in request.results.get('pathways', [])[:5]]}
+
+Answer questions about their cancer biomarker analysis. Be helpful, scientific, and concise.
+Remind users this is for research purposes only, not clinical advice."""
+
+            with client.messages.stream(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": f"{context}\n\nUser question: {request.query}"}]
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {text}\n\n"
+            
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: Error: {str(e)}\n\n"
+    
+    return StreamingResponse(generate(), media_type="text/event-stream")
