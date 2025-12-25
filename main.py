@@ -360,6 +360,148 @@ BIOMARKERS.update({
 
 BIOMARKER_SET = set(BIOMARKERS.keys())
 
+# ============================================================
+# DRUG DATABASE - FDA-approved targeted therapies
+# ============================================================
+DRUG_DATABASE = {
+    "ERBB2": {"drugs": ["Trastuzumab", "Pertuzumab", "T-DM1"], "indication": "HER2+ cancers", "fda_approved": True, "evidence": "1A"},
+    "EGFR": {"drugs": ["Osimertinib", "Erlotinib", "Gefitinib"], "indication": "EGFR-mutant NSCLC", "fda_approved": True, "evidence": "1A"},
+    "BRAF": {"drugs": ["Dabrafenib+Trametinib", "Encorafenib+Binimetinib"], "indication": "BRAF V600 mutant", "fda_approved": True, "evidence": "1A"},
+    "ALK": {"drugs": ["Alectinib", "Lorlatinib", "Brigatinib"], "indication": "ALK+ NSCLC", "fda_approved": True, "evidence": "1A"},
+    "BRCA1": {"drugs": ["Olaparib", "Rucaparib", "Niraparib"], "indication": "BRCA-mutant cancers", "fda_approved": True, "evidence": "1A"},
+    "BRCA2": {"drugs": ["Olaparib", "Rucaparib", "Niraparib"], "indication": "BRCA-mutant cancers", "fda_approved": True, "evidence": "1A"},
+    "PIK3CA": {"drugs": ["Alpelisib"], "indication": "PIK3CA-mutant HR+ breast", "fda_approved": True, "evidence": "1A"},
+    "KRAS": {"drugs": ["Sotorasib", "Adagrasib"], "indication": "KRAS G12C", "fda_approved": True, "evidence": "1A"},
+    "NTRK1": {"drugs": ["Larotrectinib", "Entrectinib"], "indication": "NTRK fusion+", "fda_approved": True, "evidence": "1A"},
+    "RET": {"drugs": ["Selpercatinib", "Pralsetinib"], "indication": "RET fusion+", "fda_approved": True, "evidence": "1A"},
+    "MET": {"drugs": ["Capmatinib", "Tepotinib"], "indication": "MET exon 14 skip", "fda_approved": True, "evidence": "1A"},
+    "ROS1": {"drugs": ["Crizotinib", "Entrectinib"], "indication": "ROS1+ NSCLC", "fda_approved": True, "evidence": "1A"},
+    "ESR1": {"drugs": ["Tamoxifen", "Fulvestrant", "Elacestrant"], "indication": "ER+ breast", "fda_approved": True, "evidence": "1A"},
+    "AR": {"drugs": ["Enzalutamide", "Abiraterone", "Darolutamide"], "indication": "AR+ prostate", "fda_approved": True, "evidence": "1A"},
+    "CDK4": {"drugs": ["Palbociclib", "Ribociclib", "Abemaciclib"], "indication": "HR+ breast", "fda_approved": True, "evidence": "1A"},
+    "CDK6": {"drugs": ["Palbociclib", "Ribociclib", "Abemaciclib"], "indication": "HR+ breast", "fda_approved": True, "evidence": "1A"},
+    "PD-L1": {"drugs": ["Pembrolizumab", "Nivolumab", "Atezolizumab"], "indication": "PD-L1+ tumors", "fda_approved": True, "evidence": "1A"},
+    "TP53": {"drugs": ["Clinical trials (APR-246)"], "indication": "TP53-mutant", "fda_approved": False, "evidence": "3"},
+    "AKT1": {"drugs": ["Capivasertib"], "indication": "AKT1-mutant", "fda_approved": True, "evidence": "1A"},
+    "FGFR2": {"drugs": ["Pemigatinib", "Futibatinib"], "indication": "FGFR2 fusion", "fda_approved": True, "evidence": "1A"},
+    "FGFR3": {"drugs": ["Erdafitinib"], "indication": "FGFR3-mutant bladder", "fda_approved": True, "evidence": "1A"},
+}
+
+# Prognostic gene signatures
+PROGNOSTIC_SIGNATURES = {
+    "proliferation": {"genes": ["MKI67", "PCNA", "TOP2A", "MCM2", "CCNB1", "AURKA"], "high_risk": "high", "weight": 2.0},
+    "immune": {"genes": ["CD8A", "CD8B", "GZMA", "GZMB", "PRF1", "IFNG"], "high_risk": "low", "weight": 1.5},
+    "stemness": {"genes": ["SOX2", "NANOG", "ALDH1A1", "CD44", "PROM1"], "high_risk": "high", "weight": 1.8},
+    "invasion": {"genes": ["MMP2", "MMP9", "TWIST1", "SNAI1", "VIM"], "high_risk": "high", "weight": 1.5},
+}
+
+def calculate_survival_score(layer_results: Dict) -> Dict:
+    """Calculate prognostic survival score"""
+    if 'expression' not in layer_results:
+        return {"risk_score": 50, "risk_group": "Unknown", "five_year_survival": "N/A", "risk_factors": [], "protective_factors": []}
+    
+    expr_data = layer_results['expression']
+    expr_genes = {}
+    for g in expr_data.get('top_variable', []) + expr_data.get('biomarkers_found', []):
+        expr_genes[g['gene']] = float(g.get('mean', 0))
+    
+    risk_score = 50.0
+    risk_factors = []
+    protective_factors = []
+    
+    for sig_name, sig_data in PROGNOSTIC_SIGNATURES.items():
+        sig_genes = [g for g in sig_data['genes'] if g in expr_genes]
+        if len(sig_genes) >= 2:
+            avg_expr = sum(expr_genes[g] for g in sig_genes) / len(sig_genes)
+            if sig_data['high_risk'] == 'high' and avg_expr > 5:
+                risk_score += 8 * sig_data['weight']
+                risk_factors.append(f"High {sig_name}")
+            elif sig_data['high_risk'] == 'low' and avg_expr < 3:
+                risk_score += 8 * sig_data['weight']
+                risk_factors.append(f"Low {sig_name}")
+            elif sig_data['high_risk'] == 'high' and avg_expr < 3:
+                risk_score -= 5
+                protective_factors.append(f"Low {sig_name}")
+            elif sig_data['high_risk'] == 'low' and avg_expr > 5:
+                risk_score -= 5
+                protective_factors.append(f"High {sig_name}")
+    
+    # Check mutations
+    if 'mutation' in layer_results:
+        mut_genes = [g['gene'] for g in layer_results['mutation'].get('frequently_mutated', [])]
+        if 'TP53' in mut_genes:
+            risk_score += 12
+            risk_factors.append("TP53 mutation")
+        if 'BRCA1' in mut_genes or 'BRCA2' in mut_genes:
+            protective_factors.append("BRCA (PARP eligible)")
+    
+    risk_score = int(max(10, min(95, risk_score)))
+    
+    if risk_score < 35:
+        risk_group, survival = "Low", "85-95%"
+    elif risk_score < 55:
+        risk_group, survival = "Intermediate-Low", "70-85%"
+    elif risk_score < 70:
+        risk_group, survival = "Intermediate-High", "50-70%"
+    else:
+        risk_group, survival = "High", "30-50%"
+    
+    return {
+        "risk_score": risk_score,
+        "risk_group": risk_group,
+        "five_year_survival": survival,
+        "risk_factors": risk_factors[:4],
+        "protective_factors": protective_factors[:3]
+    }
+
+def get_drug_recommendations(layer_results: Dict) -> List[Dict]:
+    """Get actionable drug recommendations"""
+    recommendations = []
+    seen_genes = set()
+    
+    # Check expression
+    if 'expression' in layer_results:
+        for g in layer_results['expression'].get('biomarkers_found', []):
+            gene = g['gene']
+            if gene in DRUG_DATABASE and gene not in seen_genes and float(g.get('mean', 0)) > 5:
+                seen_genes.add(gene)
+                info = DRUG_DATABASE[gene]
+                recommendations.append({
+                    "gene": gene, "alteration": "High expression",
+                    "drugs": info['drugs'], "indication": info['indication'],
+                    "fda_approved": info['fda_approved'], "evidence": info['evidence']
+                })
+    
+    # Check mutations
+    if 'mutation' in layer_results:
+        for g in layer_results['mutation'].get('frequently_mutated', []):
+            gene = g['gene']
+            if gene in DRUG_DATABASE and gene not in seen_genes:
+                seen_genes.add(gene)
+                info = DRUG_DATABASE[gene]
+                recommendations.append({
+                    "gene": gene, "alteration": f"Mutated ({g.get('percent', 'N/A')}%)",
+                    "drugs": info['drugs'], "indication": info['indication'],
+                    "fda_approved": info['fda_approved'], "evidence": info['evidence']
+                })
+    
+    # Check CNV
+    if 'cnv' in layer_results:
+        for g in layer_results['cnv'].get('amplified', []):
+            gene = g['gene']
+            if gene in DRUG_DATABASE and gene not in seen_genes:
+                seen_genes.add(gene)
+                info = DRUG_DATABASE[gene]
+                recommendations.append({
+                    "gene": gene, "alteration": "Amplified",
+                    "drugs": info['drugs'], "indication": info['indication'],
+                    "fda_approved": info['fda_approved'], "evidence": info['evidence']
+                })
+    
+    return sorted(recommendations, key=lambda x: (not x['fda_approved'], x['evidence']))[:8]
+
+
+
 # Cell-type marker signatures for deconvolution (based on literature)
 CELL_TYPE_SIGNATURES = {
     "Tumor_Epithelial": ["EPCAM", "KRT8", "KRT18", "KRT19", "MUC1", "CDH1", "CLDN4", "CLDN7"],
@@ -744,7 +886,7 @@ def predict_subtype(layer_results: Dict, cancer_type: str = 'breast') -> Dict:
 
 @app.get("/api")
 def api_root():
-    return {"api": "SynOmix AI", "version": "6.0.0"}
+    return {"api": "SynOmix AI", "version": "7.0.0"}
 
 
 @app.post("/api/experiment/create")
@@ -819,7 +961,9 @@ async def analyze_experiment(exp_id: str):
         "layer_results": layer_results,
         "integrated": integrated,
         "pathways": pathways,
-        "subtype": subtype
+        "subtype": subtype,
+        "survival": calculate_survival_score(layer_results),
+        "drug_recommendations": get_drug_recommendations(layer_results)
     }
 
 

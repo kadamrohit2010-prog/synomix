@@ -163,7 +163,7 @@ const Icons = {
     Home: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
     Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>,
     Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
-    Dna: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v6.072a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>,
+    Dna: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v7.0a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>,
     Brain: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
     Pathway: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
@@ -351,6 +351,8 @@ function App() {
                     description: data.subtype?.description || "Analysis complete"
                 },
                 deconvolution: data.layer_results?.deconvolution || null,
+                survival: data.survival || null,
+                drug_recommendations: data.drug_recommendations || [],
                 hypotheses: (data.integrated || []).slice(0, 3).map((g, i) => ({
                     rank: i + 1,
                     gene: g.gene,
@@ -411,7 +413,7 @@ function App() {
         <aside className={`sidebar fixed left-0 top-0 h-screen flex flex-col z-50 ${isMobile ? (mobileMenuOpen ? 'sidebar-expanded' : 'sidebar-collapsed') : (sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed')}`}>
             <div className="p-4 flex items-center gap-3 border-b border-slate-700/50">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center text-white font-bold animate-glow">S</div>
-                {(sidebarOpen || mobileMenuOpen) && <div><div className="font-bold text-white">SynOmix AI</div><div className="text-xs text-slate-400">v6.0</div></div>}
+                {(sidebarOpen || mobileMenuOpen) && <div><div className="font-bold text-white">SynOmix AI</div><div className="text-xs text-slate-400">v7.0</div></div>}
             </div>
             <nav className="flex-1 p-3 space-y-1">
                 {navItems.map(item => (
@@ -513,6 +515,7 @@ function App() {
             <div className="fade-in space-y-6">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                     <div><h1 className="text-3xl font-bold mb-2">{results.story?.title}</h1><p className="text-slate-400">{results.story?.subtitle}</p></div>
+                    <button onClick={() => { setResults(null); setLayers([]); setCurrentPage('upload'); }} className="btn-secondary flex items-center gap-2 mr-3">↺ Start Over</button>
                     <button onClick={() => generatePDF(results, layers)} className="btn-secondary flex items-center gap-2"><Icons.Download /> Export PDF</button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -541,6 +544,61 @@ function App() {
                 <div className="card p-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
                     <div className="flex items-center gap-4"><div className="text-4xl">⭐</div><div><div className="font-bold text-lg">{results.story?.keyInsight}</div><p className="text-slate-400">{results.story?.summary}</p></div></div>
                 </div>
+
+                {/* Survival Analysis */}
+                {results.survival && results.survival.risk_group !== "Unknown" && (
+                    <div className="card p-6 bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/30">
+                        <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+                            <div>
+                                <h3 className="font-bold text-lg flex items-center gap-2">📈 Prognostic Analysis</h3>
+                                <p className="text-sm text-slate-400">Survival risk based on molecular signatures</p>
+                            </div>
+                            <div className="text-center px-6 py-3 rounded-lg" style={{background: results.survival?.risk_group === 'Low' ? 'rgba(16,185,129,0.2)' : results.survival?.risk_group === 'High' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}}>
+                                <div className="text-2xl font-bold" style={{color: results.survival?.risk_group === 'Low' ? '#10b981' : results.survival?.risk_group === 'High' ? '#ef4444' : '#f59e0b'}}>{results.survival?.risk_group || 'N/A'}</div>
+                                <div className="text-xs text-slate-400">Risk Group</div>
+                            </div>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <div className="p-4 rounded-lg bg-slate-800/50 text-center">
+                                <div className="text-3xl font-bold text-white">{results.survival?.risk_score || 0}%</div>
+                                <div className="text-sm text-slate-400">Risk Score</div>
+                            </div>
+                            <div className="p-4 rounded-lg bg-slate-800/50 text-center">
+                                <div className="text-2xl font-bold text-cyan-400">{results.survival?.five_year_survival || 'N/A'}</div>
+                                <div className="text-sm text-slate-400">5-Year Survival Est.</div>
+                            </div>
+                            <div className="p-4 rounded-lg bg-slate-800/50">
+                                <div className="text-sm text-slate-400 mb-2">Key Factors</div>
+                                {results.survival?.risk_factors?.map((f, i) => <div key={i} className="text-xs text-red-300 mb-1">⚠ {f}</div>)}
+                                {results.survival?.protective_factors?.map((f, i) => <div key={i} className="text-xs text-green-300 mb-1">✓ {f}</div>)}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Drug Recommendations */}
+                {results.drug_recommendations && results.drug_recommendations.length > 0 && (
+                    <div className="card p-6">
+                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">💊 Actionable Drug Targets</h3>
+                        <p className="text-sm text-slate-400 mb-4">FDA-approved therapies based on your molecular profile</p>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {results.drug_recommendations.map((rec, i) => (
+                                <div key={i} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-cyan-500/50 transition-colors">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="font-bold text-cyan-400">{rec.gene}</span>
+                                        {rec.fda_approved ? <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">FDA ✓</span> : <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">Trial</span>}
+                                    </div>
+                                    <div className="text-xs text-amber-400 mb-2">{rec.alteration}</div>
+                                    <div className="space-y-1 mb-2">
+                                        {rec.drugs?.slice(0,3).map((drug, j) => <div key={j} className="text-sm text-slate-300">• {drug}</div>)}
+                                    </div>
+                                    <div className="text-xs text-slate-500">{rec.indication}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Tumor Microenvironment Section */}
                 {results.deconvolution && (
                     <div className="card p-6">
@@ -759,7 +817,7 @@ function App() {
                 <div className="max-w-6xl mx-auto">{renderPage()}</div>
             </main>
             <a href="https://www.linkedin.com/in/rohitpk/" target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-4 py-3 rounded-full shadow-lg flex items-center gap-2 z-50">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v6.067H9.351V9h3.414v6.061h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.086zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v7.0H9.351V9h3.414v7.0h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v7.0zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v7.0zM22.225 0H1.771C.792 0 0 .774 0 1.729v7.0C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                 <span className="font-medium hidden sm:inline">Connect</span>
             </a>
         </div>
