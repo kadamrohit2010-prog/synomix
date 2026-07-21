@@ -473,6 +473,42 @@ function App() {
         </div>
     );
 
+    
+    const importFromGEO = async () => {
+        if (!geoId.trim()) return;
+        setGeoLoading(true);
+        try {
+            // Create experiment first
+            const createRes = await fetch('/api/experiment/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cancer_type: cancerType }) });
+            const { experiment_id: expId } = await createRes.json();
+            setExpId(expId);
+            
+            // Import from GEO
+            const res = await fetch('/api/geo/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ geo_id: geoId.trim(), exp_id: expId }) });
+            const data = await res.json();
+            
+            if (data.success) {
+                setLayers([{ type: 'expression', name: data.geo_id + ' (GEO)', genes: data.genes, samples: data.samples }]);
+                alert('✅ Imported ' + data.genes + ' genes from ' + data.samples + ' samples!');
+            } else {
+                alert('❌ ' + (data.detail || 'Import failed'));
+            }
+        } catch (e) {
+            alert('❌ Error: ' + e.message);
+        }
+        setGeoLoading(false);
+    };
+
+    const loadGeoExamples = async () => {
+        try {
+            const res = await fetch('/api/geo/examples');
+            const data = await res.json();
+            setGeoExamples(data.examples || []);
+        } catch (e) { console.error(e); }
+    };
+
+    React.useEffect(() => { loadGeoExamples(); }, []);
+
     const UploadPage = () => (
         <div className="fade-in space-y-6">
             <div><h1 className="text-3xl font-bold mb-2">Upload Data</h1><p className="text-slate-400">Add your omics data files for integrated analysis</p></div>
@@ -485,6 +521,7 @@ function App() {
                 <p className="text-lg mb-2">Drop files here or click to browse</p>
                 <p className="text-sm text-slate-400">Supports .csv, .tsv, .txt, .cct, .cbt</p>
             </div>
+            )}
             {layers.length > 0 && (
                 <div className="card p-6">
                     <h3 className="font-bold mb-4">Uploaded Layers ({layers.length})</h3>

@@ -15,6 +15,8 @@ import io
 import gzip
 from datetime import datetime
 import os
+import GEOparse
+import tempfile
 
 app = FastAPI(title="SynOmix AI", version="3.1.0")
 
@@ -1006,6 +1008,109 @@ class ChatRequest(BaseModel):
 
 
 from fastapi.responses import StreamingResponse
+
+
+# ============ GEO IMPORT ============
+class GEOImportRequest(BaseModel):
+    geo_id: str
+    exp_id: str
+
+@app.post("/api/geo/search")
+async def search_geo(query: str):
+    """Search GEO for datasets (returns suggestions)"""
+    # For now, just validate format
+    if query.upper().startswith("GSE") and query[3:].isdigit():
+        return {"valid": True, "geo_id": query.upper(), "message": f"Ready to import {query.upper()}"}
+    return {"valid": False, "message": "Enter a valid GEO ID (e.g., GSE12345)"}
+
+@app.post("/api/geo/import")
+async def import_geo_dataset(request: GEOImportRequest):
+    """Import dataset directly from GEO"""
+    geo_id = request.geo_id.upper().strip()
+    exp_id = request.exp_id
+    
+    if exp_id not in experiments:
+        raise HTTPException(404, "Experiment not found")
+    
+    if not geo_id.startswith("GSE"):
+        raise HTTPException(400, "Invalid GEO ID. Must start with GSE")
+    
+    try:
+        # Download from GEO
+        with tempfile.TemporaryDirectory() as tmpdir:
+            gse = GEOparse.get_GEO(geo=geo_id, destdir=tmpdir, silent=True)
+            
+            # Get expression data from first GPL
+            if not gse.gpls:
+                raise HTTPException(400, "No platform data found in this GEO dataset")
+            
+            # Try to get expression matrix
+            expression_data = None
+            sample_count = len(gse.gsms)
+            
+            # Method 1: Try to get from GSMs directly
+            gene_data = {}
+            sample_names = []
+            
+            for gsm_name, gsm in gse.gsms.items():
+                sample_names.append(gsm_name)
+                if hasattr(gsm, 'table') and gsm.table is not None and len(gsm.table) > 0:
+                    # Get ID and VALUE columns
+                    if 'ID_REF' in gsm.table.columns and 'VALUE' in gsm.table.columns:
+                        for _, row in gsm.table.iterrows():
+                            gene = str(row['ID_REF'])
+                            value = row['VALUE']
+                            if gene not in gene_data:
+                                gene_data[gene] = {}
+                            try:
+                                gene_data[gene][gsm_name] = float(value)
+                            except:
+                                gene_data[gene][gsm_name] = 0.0
+            
+            if gene_data:
+                # Convert to DataFrame
+                df = pd.DataFrame(gene_data).T
+                df.index.name = 'Gene'
+                
+                # Store in experiment
+                experiments[exp_id]["layers"]["expression"] = df
+                experiments[exp_id]["layer_info"]["expression"] = {
+                    "filename": f"{geo_id}_expression.txt",
+                    "genes": df.shape[0],
+                    "samples": df.shape[1],
+                    "source": "GEO"
+                }
+                
+                return {
+                    "success": True,
+                    "geo_id": geo_id,
+                    "title": gse.metadata.get('title', ['Unknown'])[0] if hasattr(gse, 'metadata') else "GEO Dataset",
+                    "samples": sample_count,
+                    "genes": df.shape[0],
+                    "layer_type": "expression",
+                    "message": f"Successfully imported {geo_id} with {df.shape[0]} genes and {df.shape[1]} samples"
+                }
+            else:
+                raise HTTPException(400, "Could not extract expression data from this GEO dataset. Try a different GSE ID.")
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Error importing GEO dataset: {str(e)}")
+
+@app.get("/api/geo/examples")
+async def get_geo_examples():
+    """Return example GEO datasets for different cancer types"""
+    return {
+        "examples": [
+            {"geo_id": "GSE62944", "title": "TCGA Pan-Cancer (RNA-seq)", "cancer": "Multiple", "samples": "~9000"},
+            {"geo_id": "GSE2034", "title": "Breast Cancer Relapse", "cancer": "Breast", "samples": "286"},
+            {"geo_id": "GSE14520", "title": "Hepatocellular Carcinoma", "cancer": "Liver", "samples": "445"},
+            {"geo_id": "GSE31210", "title": "Lung Adenocarcinoma", "cancer": "Lung", "samples": "226"},
+            {"geo_id": "GSE17536", "title": "Colorectal Cancer", "cancer": "Colorectal", "samples": "177"},
+        ]
+    }
+
 
 @app.post("/api/chat")
 async def chat_with_claude(request: ChatRequest):
