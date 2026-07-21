@@ -1036,7 +1036,7 @@ Answer questions about their cancer biomarker analysis. Be helpful, scientific, 
 Remind users this is for research purposes only, not clinical advice."""
 
             with client.messages.stream(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=1024,
                 messages=[{"role": "user", "content": f"{context}\n\nUser question: {request.query}"}]
             ) as stream:
