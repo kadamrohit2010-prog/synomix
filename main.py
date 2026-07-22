@@ -900,8 +900,15 @@ async def create_experiment(name: str = Form("My Experiment"), cancer_type: str 
 
 @app.post("/api/experiment/{exp_id}/upload")
 async def upload_layer(exp_id: str, file: UploadFile = File(...), layer_type: str = Form(None)):
+    # Auto-create experiment if it doesn't exist (handles multi-worker case)
     if exp_id not in experiments:
-        raise HTTPException(404, "Experiment not found")
+        experiments[exp_id] = {
+            "id": exp_id,
+            "created": datetime.now().isoformat(),
+            "cancer_type": "breast",
+            "layers": {},
+            "layer_info": {}
+        }
     
     contents = await file.read()
     detected_type = layer_type or detect_layer_type(file.filename)
