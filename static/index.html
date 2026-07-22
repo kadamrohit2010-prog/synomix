@@ -236,6 +236,8 @@ function App() {
     const [tab, setTab] = useState('all');
     const [query, setQuery] = useState('');
     const [chat, setChat] = useState([]);
+    const [geoId, setGeoId] = useState('');
+    const [geoLoading, setGeoLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const fileRef = useRef();
     const chatRef = useRef();
@@ -441,7 +443,6 @@ function App() {
         </header>
     );
 
-    
     const importFromGEO = async () => {
         if (!geoId.trim()) return;
         setGeoLoading(true);
@@ -453,9 +454,9 @@ function App() {
             const data = await res.json();
             if (data.success) {
                 setLayers([{ type: 'expression', name: data.geo_id + ' (GEO)', genes: data.genes, samples: data.samples }]);
-                alert('✅ Imported ' + data.genes + ' genes from ' + data.samples + ' samples!');
-            } else { alert('❌ ' + (data.detail || 'Import failed')); }
-        } catch (e) { alert('❌ Error: ' + e.message); }
+                alert('Imported ' + data.genes + ' genes from ' + data.samples + ' samples!');
+            } else { alert('Error: ' + (data.detail || 'Import failed')); }
+        } catch (e) { alert('Error: ' + e.message); }
         setGeoLoading(false);
     };
 
@@ -525,7 +526,7 @@ function App() {
                 <h3 className="font-bold mb-3">📥 Import from NCBI GEO</h3>
                 <div className="flex gap-3">
                     <input value={geoId} onChange={(e) => setGeoId(e.target.value)} placeholder="Enter GEO ID (e.g., GSE62944)" className="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400" />
-                    <button onClick={importFromGEO} disabled={geoLoading || !geoId.trim()} className="btn-primary px-6">{geoLoading ? '⏳ Importing...' : '📥 Import'}</button>
+                    <button onClick={importFromGEO} disabled={geoLoading || !geoId.trim()} className="btn-primary px-6">{geoLoading ? 'Importing...' : '📥 Import'}</button>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">Examples: GSE62944 (TCGA), GSE2034 (Breast), GSE14520 (Liver)</p>
             </div>
